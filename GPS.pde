@@ -25,14 +25,17 @@ void GPS_NewData() {
           uint8_t *varptr = (uint8_t *)&GPS_distanceToHome;
           *varptr++ = i2c_readAck();
           *varptr   = i2c_readAck();
+
           varptr = (uint8_t *)&GPS_directionToHome;
           *varptr++ = i2c_readAck();
           *varptr   = i2c_readAck();
+
           varptr = (uint8_t *)&GPS_latitude;		// for OSD latitude displaying
           *varptr++ = i2c_readAck();
           *varptr++ = i2c_readAck();
           *varptr++ = i2c_readAck();
           *varptr   = i2c_readAck();
+
           varptr = (uint8_t *)&GPS_longitude;		// for OSD longitude displaying
           *varptr++ = i2c_readAck();
           *varptr++ = i2c_readAck();
@@ -42,14 +45,24 @@ void GPS_NewData() {
           i2c_rep_start(I2C_GPS_ADDRESS);
           i2c_write(I2C_GPS_GROUND_SPEED);          //Start read from here 2x2 bytes speed and altitude
           i2c_rep_start(I2C_GPS_ADDRESS+1);
+
           varptr = (uint8_t *)&GPS_speed;			// speed in cm/s for OSD
           *varptr++ = i2c_readAck();
           *varptr   = i2c_readAck();
+
           varptr = (uint8_t *)&GPS_altitude;       // altitude in meters for OSD
           *varptr++ = i2c_readAck();
           *varptr   = i2c_readNak();
+
+          //GPS_ground_course
+          i2c_rep_start(I2C_GPS_ADDRESS);
+          i2c_write(I2C_GPS_COURSE);             //0x9C
+          i2c_rep_start(I2C_GPS_ADDRESS+1);
+          
+          varptr = (uint8_t *)&GPS_ground_course;
+          *varptr++ = i2c_readAck();
+          *varptr   = i2c_readNak();
         }
-  
     } else {                                                                          //We don't have a fix zero out distance and bearing (for safety reasons)
       GPS_distanceToHome = 0;
       GPS_directionToHome = 0;

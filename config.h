@@ -24,6 +24,7 @@
 //#define OCTOFLATX
 //#define FLYING_WING
 //#define VTAIL4
+//#define AIRPLANE     // PatrikE Experimental. Howto setup =>>>http://fotoflygarn.blogspot.com/2012/03/how-to-setup-multiwii-airplane-same.html
 
 #define YAW_DIRECTION 1 // if you want to reverse the yaw correction direction
 //#define YAW_DIRECTION -1
@@ -59,6 +60,7 @@
 */
 //#define RCAUXPIN8
 //#define RCAUXPIN12
+//#define RCOPTIONSBEEP        //uncomment this if you want the buzzer to beep at any rcOptions change on channel Aux1 to Aux4
 
 /* GPS using a SERIAL port
    only available on MEGA boards (this might be possible on 328 based boards in the future)
@@ -130,7 +132,7 @@
 //#define DROTEK_10DOF_MS // Drotek 10DOF with ITG3200, BMA180, HMC5883, MS5611, LLC
 //#define DROTEK_6DOFv2   // Drotek 6DOF v2
 //#define DROTEK_6DOF_MPU // Drotek 6DOF with MPU6050
-//#define MONGOOSE1_0     // mongoose 1.0    http://www.fuzzydrone.org/
+//#define MONGOOSE1_0     // mongoose 1.0    http://store.ckdevices.com/
 //#define CRIUS_LITE      // Crius MultiWii Lite
 //#define CRIUS_SE        // Crius MultiWii SE
 
@@ -307,13 +309,13 @@
 #define LCD_SERIAL3W    // Alex' initial variant with 3 wires, using rx-pin for transmission @9600 baud fixed
 /* serial (wired or wireless via BT etc.) */
 //#define LCD_TEXTSTAR    // Cat's Whisker LCD_TEXTSTAR Module CW-LCD-02 (Which has 4 input keys for selecting menus)
-//#define LCD_VT100               // vt100 compatible terminal emulation (blueterm, putty, etc.)
+//#define LCD_VT100       // vt100 compatible terminal emulation (blueterm, putty, etc.)
 /* i2c devices */
 //#define LCD_ETPP        // Eagle Tree Power Panel LCD, which is i2c (not serial)
 //#define LCD_LCD03       // LCD03, which is i2c
 
 /* style of display - autodetected by LCD_ setting - only activate to overwrite defaults */
-//#define DISPLAY_2LINES
+#define DISPLAY_2LINES
 //#define DISPLAY_MULTILINE
 
 /* keys to navigate the LCD menu (preset to LCD_TEXTSTAR key-depress codes)*/

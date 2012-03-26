@@ -707,13 +707,13 @@ void mixTable() {
     motor[7] = PIDMIX(+1  ,+1/2,-1); //MIDREAR_L 
   #endif
   #ifdef VTAIL4
-    motor[0] = PIDMIX(+0,+1, -1/2);      //REAR_R 
+    motor[0] = PIDMIX(+0,+1, -1/2);   //REAR_R 
     motor[1] = PIDMIX(-1, -1, +2/10); //FRONT_R 
-    motor[2] = PIDMIX(+0,+1, +1/2);      //REAR_L 
+    motor[2] = PIDMIX(+0,+1, +1/2);   //REAR_L 
     motor[3] = PIDMIX(+1, -1, -2/10); //FRONT_L
   #endif
 
-  #ifdef SERVO_TILT
+  #if defined(SERVO_TILT)
     #if defined(A0_A1_PIN_HEX) && (NUMBER_MOTOR == 6) && defined(PROMINI)
       #define S_PITCH servo[2]
       #define S_ROLL  servo[3]
@@ -730,11 +730,11 @@ void mixTable() {
     S_PITCH = constrain(S_PITCH, TILT_PITCH_MIN, TILT_PITCH_MAX);
     S_ROLL  = constrain(S_ROLL , TILT_ROLL_MIN, TILT_ROLL_MAX  );   
   #endif
-  #ifdef GIMBAL
+  #if defined(GIMBAL)
     servo[0] = constrain(TILT_PITCH_MIDDLE + TILT_PITCH_PROP * angle[PITCH] /16 + rcCommand[PITCH], TILT_PITCH_MIN, TILT_PITCH_MAX);
     servo[1] = constrain(TILT_ROLL_MIDDLE + TILT_ROLL_PROP   * angle[ROLL]  /16 + rcCommand[ROLL], TILT_ROLL_MIN, TILT_ROLL_MAX);
   #endif
-  #ifdef FLYING_WING
+  #if defined(FLYING_WING)
     motor[0] = rcCommand[THROTTLE];
     if (passThruMode) {// do not use sensors for correction, simple 2 channel mixing
        servo[0]  = PITCH_DIRECTION_L * (rcData[PITCH]-MIDRC) + ROLL_DIRECTION_L * (rcData[ROLL]-MIDRC);
@@ -746,6 +746,51 @@ void mixTable() {
     servo[0]  = constrain(servo[0] + wing_left_mid , WING_LEFT_MIN,  WING_LEFT_MAX );
     servo[1]  = constrain(servo[1] + wing_right_mid, WING_RIGHT_MIN, WING_RIGHT_MAX);
   #endif
+  #if defined(AIRPLANE) //PatrikE Experimentals
+    // Servosettings Only For Airplane
+    uint16_t      servoMid[8] = {1500,1500,1500,1500,1500,1500,1500,1500}; // Midpoint on servo
+    uint16_t   servotravel[8] = {100, 100, 100, 100, 100, 100, 100, 100};  // Rates in 0-100% 
+    int8_t    servoreverse[8] = { 1,   1,   1,   -1,  1,   1,   1,   1};   // Invert servos by setting -1  
+  
+    // Common functions for Plane
+    static int16_t servolimit[8][2]; // Holds servolimit data
+    #define SERVO_MIN 1020           // limit servo travel range must be inside [1020;2000]
+    #define SERVO_MAX 2000           // limit servo travel range must be inside [1020;2000]
+
+    for(i=0; i<8; i++){  //  Set rates with 0 - 100%. 
+      servolimit[i][0]=servoMid[i]-((servoMid[i]-SERVO_MIN) *(servotravel[i]*0.01));
+      servolimit[i][1]=servoMid[i]+((SERVO_MAX - servoMid[i]) *(servotravel[i]*0.01));  
+    }
+    if (!armed){ 
+      servo[7]=constrain( 900, SERVO_MIN, SERVO_MAX); // Kill throttle when disarmed
+    } else {   
+      servo[7]  = constrain(rcCommand[THROTTLE], servolimit[7][0], servolimit[7][1]); //   50hz ESC or servo
+    }
+
+    // servo[7] is programmed with safty features to avoid motorstarts when ardu reset..  
+    // All other servos go to center at reset..  Half throttle can be dangerus    
+    // Only use servo[7] as motorcontrol if motor is used in the setup            */
+
+    if(passThruMode) {   // Direct passthru from RX 
+      servo[3]  = servoMid[3]+(rcCommand[ROLL] *servoreverse[3]);     //   Wing 1
+      servo[4]  = servoMid[4]+(rcCommand[ROLL] *servoreverse[4]);     //   Wing 2
+      servo[5]  = servoMid[5]+(rcCommand[YAW]  *servoreverse[5]);     //   Rudder
+      servo[6]  = servoMid[6]+(rcCommand[PITCH]*servoreverse[6]);     //   Elevator 
+    } else {
+      // use sensors to correct (gyro only or gyro+acc according to AUX configuration
+      // invert the sign before axisPID to reverse servos GyroResponse
+      servo[3]  =(servoMid[3] + (((axisPID[ROLL]) + (angle[ROLL]  /16)) *servoreverse[3])); //   Right Ail 
+      servo[4]  =(servoMid[4] + (((axisPID[ROLL]) + (angle[ROLL]  /16)) *servoreverse[4])); //   Left Ail  
+      servo[5]  =(servoMid[5] + (((axisPID[YAW])                      ) *servoreverse[5])); //   Rudder
+      servo[6]  =(servoMid[6] + (((axisPID[PITCH] + (angle[PITCH] /16)))*servoreverse[6])); //   Elevator
+    }
+    // ServoRates
+    for(uint8_t i=0;i<8;i++){ 
+      servo[i]  = map(servo[i], SERVO_MIN, SERVO_MAX, servolimit[i][0],  servolimit[i][1]);
+      servo[i]  = constrain( servo[i], SERVO_MIN, SERVO_MAX);
+    }
+  #endif
+
   #if defined(CAMTRIG)
     static uint8_t camCycle = 0;
     static uint8_t camState = 0;

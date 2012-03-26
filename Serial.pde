@@ -70,7 +70,6 @@ void serialCom() {
     #endif // LCD_TELEMETRY
     case 'M': // Multiwii @ arduino to GUI all data
       serialize8('M');
-      //delay(10);
       serialize8(VERSION);
       for(i=0;i<3;i++) serialize16(accSmooth[i]);
       for(i=0;i<3;i++) serialize16(gyroData[i]);
@@ -81,7 +80,7 @@ void serialCom() {
       for(i=0;i<8;i++) serialize16(motor[i]);
       for(i=0;i<8;i++) serialize16(rcData[i]);
       serialize8(nunchuk|ACC<<1|BARO<<2|MAG<<3|GPS<<4);
-      serialize8(accMode|baroMode<<1|magMode<<2|GPSModeHome<<3|GPSModeHold<<4|armed<<5);
+      serialize8(accMode<<BOXACC|baroMode<<BOXBARO|magMode<<BOXMAG|GPSModeHome<<BOXGPSHOME|GPSModeHold<<BOXGPSHOLD|armed<<BOXARM);
       #if defined(LOG_VALUES)
         serialize16(cycleTimeMax);
         cycleTimeMax = 0;

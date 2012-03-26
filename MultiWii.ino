@@ -47,7 +47,7 @@ March  2012     V2.0
 static uint32_t currentTime = 0;
 static uint16_t previousTime = 0;
 static uint16_t cycleTime = 0;     // this is the number in micro second to achieve a full loop, it can differ a little and is taken into account in the PID loop
-static uint16_t calibratingA = 0;  // the calibration is done is the main loop. Calibrating decreases at each cycle down to 0, then we enter in a normal mode.
+static uint16_t calibratingA = 0;  // the calibration is done in the main loop. Calibrating decreases at each cycle down to 0, then we enter in a normal mode.
 static uint8_t  calibratingM = 0;
 static uint16_t calibratingG;
 static uint8_t  armed = 0;
@@ -75,6 +75,7 @@ static int16_t  BaroPID = 0;
 static int32_t  AltHold;
 static int16_t  errorAltitudeI = 0;
 static uint8_t  buzzerState = 0;
+static uint8_t  toggleBeep = 0;
 static int16_t  debug1,debug2,debug3,debug4;
   
 //for log
@@ -119,12 +120,12 @@ static uint8_t telemetry_auto = 0;
 
 volatile int16_t failsafeCnt = 0;
 static int16_t failsafeEvents = 0;
-static int16_t rcData[8];    // interval [1000;2000]
-static int16_t rcCommand[4]; // interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW 
+static int16_t rcData[8];          // interval [1000;2000]
+static int16_t rcCommand[4];       // interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW 
 static uint8_t rcRate8;
 static uint8_t rcExpo8;
-static int16_t lookupRX[7]; //  lookup table for expo & RC rate
-volatile uint8_t rcFrameComplete; //for serial rc receiver Spektrum
+static int16_t lookupRX[7];       // lookup table for expo & RC rate
+volatile uint8_t rcFrameComplete; // for serial rc receiver Spektrum
 
 
 // **************
@@ -170,13 +171,16 @@ static uint16_t GPS_distanceToHome,GPS_distanceToHold;       // distance to home
 static int16_t  GPS_directionToHome,GPS_directionToHold;     // direction to home or hol point in degrees
 static uint16_t GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s - Added by Mis
 static uint8_t  GPS_update = 0;                              // it's a binary toogle to distinct a GPS position update
-static int16_t  GPS_angle[2];                                // it's the angles that must be applied for GPS correction
+static int16_t  GPS_angle[2] = { 0, 0};                      // it's the angles that must be applied for GPS correction
+
+static uint16_t GPS_ground_course = 0;                       //degrees*10
+
 
 void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
   uint8_t i,r;
   for (r=0;r<repeat;r++) {
     for(i=0;i<num;i++) {
-      LEDPIN_TOGGLE; //switch LEDPIN state
+      LEDPIN_TOGGLE; // switch LEDPIN state
       BUZZERPIN_ON;
       delay(wait);
       BUZZERPIN_OFF;
@@ -204,9 +208,15 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   #endif
 
   // PITCH & ROLL only dynamic PID adjustemnt,  depending on throttle value
-  if      (rcData[THROTTLE]<1500) prop2 = 100;
-  else if (rcData[THROTTLE]<2000) prop2 = 100 - (uint16_t)dynThrPID*(rcData[THROTTLE]-1500)/500;
-  else                            prop2 = 100 - dynThrPID;
+  if   (rcData[THROTTLE]<1500) {
+    prop2 = 100;
+  } else {
+    if (rcData[THROTTLE]<2000) {
+      prop2 = 100 - (uint16_t)dynThrPID*(rcData[THROTTLE]-1500)/500;
+    } else {
+      prop2 = 100 - dynThrPID;
+    }
+  }
 
   for(axis=0;axis<3;axis++) {
     uint16_t tmp = min(abs(rcData[axis]-MIDRC),500);
@@ -219,7 +229,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       rcCommand[axis] = lookupRX[tmp2] + (tmp-tmp2*100) * (lookupRX[tmp2+1]-lookupRX[tmp2]) / 100;
       prop1 = 100-(uint16_t)rollPitchRate*tmp/500;
       prop1 = (uint16_t)prop1*prop2/100;
-    } else { //YAW
+    } else {      // YAW
       rcCommand[axis] = tmp;
       prop1 = 100-(uint16_t)yawRate*tmp/500;
     }
@@ -262,15 +272,13 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     	for (uint8_t i=0;i<8;i++) vbatRaw += vbatRawArray[i];
     	vbat = vbatRaw / (VBATSCALE/2);                  // result is Vbatt in 0.1V steps
     }
-    if ( rcOptions[BOXBEEPERON] ){ // unconditional beeper on via AUXn switch 
-       buzzerFreq = 7;
-    } else  if ( ( (vbat>VBATLEVEL1_3S) 
+    if ( ( (vbat>VBATLEVEL1_3S) 
     #if defined(POWERMETER)
                          && ( (pMeter[PMOTOR_SUM] < pAlarm) || (pAlarm == 0) )
     #endif
                        )  || (NO_VBAT>vbat)                              ) // ToLuSe
     {                                          // VBAT ok AND powermeter ok, buzzer off
-      buzzerFreq = 0; buzzerState = 0; BUZZERPIN_OFF;
+      buzzerFreq = 0; buzzerState = 0;
     #if defined(POWERMETER)
     } else if (pMeter[PMOTOR_SUM] > pAlarm) {                             // sound alarm for powermeter
       buzzerFreq = 4;
@@ -278,20 +286,10 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     } else if (vbat>VBATLEVEL2_3S) buzzerFreq = 1;
     else if (vbat>VBATLEVEL3_3S)   buzzerFreq = 2;
     else                           buzzerFreq = 4;
-    if (buzzerFreq) {
-      if (buzzerState && (currentTime > buzzerTime + 250000) ) {
-        buzzerState = 0;
-        BUZZERPIN_OFF;
-        buzzerTime = currentTime;
-      } else if ( !buzzerState && (currentTime > (buzzerTime + (2000000>>buzzerFreq))) ) {
-        buzzerState = 1;
-        BUZZERPIN_ON;
-        buzzerTime = currentTime;
-      }
-    }
   #endif
-
-  if ( (calibratingA>0 && (ACC || nunchuk) ) || (calibratingG>0) ) {  // Calibration phasis
+  buzzer(buzzerFreq); // external buzzer routine that handles buzzer events globally now
+  
+  if ( (calibratingA>0 && (ACC || nunchuk) ) || (calibratingG>0) ) { // Calibration phasis
     LEDPIN_TOGGLE;
   } else {
     if (calibratedACC == 1) {LEDPIN_OFF;}
@@ -453,7 +451,11 @@ void loop () {
               AccInflightCalibrationSavetoEEProm = 1;
             }else{ 
               AccInflightCalibrationArmed = !AccInflightCalibrationArmed; 
-              if (AccInflightCalibrationArmed){blinkLED(10,1,2);}else{blinkLED(10,10,3);} 
+              if (AccInflightCalibrationArmed){
+                toggleBeep = 2;
+              } else {
+                toggleBeep = 3;
+              } 
             }
           }
        } 
