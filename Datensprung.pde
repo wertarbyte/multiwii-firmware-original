@@ -44,19 +44,10 @@ void datensprung_reset() {
 	datensprung_values.max = 0;
 }
 
-uint8_t datensprung_frame_verify(struct ds_frame_t *f) {
-	uint8_t sum = 0;
-	uint8_t i = 0;
-	for (i=0; i<sizeof(*f); i++) {
-		sum ^= ((uint8_t*)f)[i];
-	}
-	return (sum == 0);
-}
-
 void datensprung_process() {
 	struct ds_frame_t frame;
 	while (decoder_get_frame(&frame)) {
-		if (! datensprung_frame_verify(&frame)) continue;
+		if (! decoder_verify_frame(&frame)) continue;
 
 		/* evaluate the received frames */
 	}

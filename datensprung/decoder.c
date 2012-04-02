@@ -63,3 +63,12 @@ uint8_t decoder_get_frame(struct ds_frame_t *t) {
 		return 0;
 	}
 }
+
+uint8_t decoder_verify_frame(struct ds_frame_t *f) {
+	uint8_t sum = 0;
+	uint8_t i;
+	for (i=0; i<sizeof(*f); i++) {
+		sum ^= ((uint8_t*)f)[i];
+	}
+	return (sum==0);
+}
