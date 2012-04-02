@@ -16,7 +16,7 @@ static int8_t datensprung_tristate(uint16_t value) {
 	}
 }
 
-void datensprung_feed(uint16_t value) {
+void datensprung_feed(uint16_t value, uint32_t timestamp) {
 	static int8_t last_rstate = 0;
 	static uint32_t last_change = 0;
 	/* calibrate */
@@ -24,16 +24,23 @@ void datensprung_feed(uint16_t value) {
 	if (value > datensprung_values.max) datensprung_values.max = value;
 
 	int8_t state = datensprung_tristate(value);
-	uint32_t now = millis();
 
 	if (state != last_rstate) {
 		decoder_feed(state);
-		last_change = now;
+		last_change = timestamp;
 	} else {
-		if (now-last_change > 90) {
+		/* 90 ms without a state change indicates a reset condition */
+		if (timestamp-last_change > 90*1000) {
 			decoder_reset();
 		}
 	}
 
 	last_rstate = state;
+}
+
+void datensprung_process() {
+	struct ds_frame_t frame;
+	while (decoder_get_frame(&frame)) {
+		/* evaluate the received frames */
+	}
 }

@@ -621,6 +621,11 @@ void loop () {
     #endif
     if (rcOptions[BOXPASSTHRU]) {passThruMode = 1;}
     else passThruMode = 0;
+
+    #ifdef DATENSPRUNG_CHANNEL
+      datensprung_feed( rcData[DATENSPRUNG_CHANNEL], currentTime );
+      datensprung_process();
+    #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
     switch (taskOrder++ % 5) {

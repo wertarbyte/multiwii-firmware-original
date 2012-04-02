@@ -58,6 +58,9 @@
 //#define RCAUXPIN12
 //#define RCOPTIONSBEEP        //uncomment this if you want the buzzer to beep at any rcOptions change on channel Aux1 to Aux4
 
+/* use Datensprung library to encode/decode binary data in one of the rc channels */
+//#define DATENSPRUNG_CHANNEL AUX2
+
 /* GPS using a SERIAL port
    only available on MEGA boards (this might be possible on 328 based boards in the future)
    if enabled, define here the Arduino Serial port number and the UART speed
