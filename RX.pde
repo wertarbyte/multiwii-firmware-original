@@ -373,6 +373,9 @@ void computeRC() {
     #if defined(SBUS)
       readSBus();
     #endif
+    #if defined(DATENSPRUNG_CHANNEL)
+      datensprung_feed( rcValue[rcChannel[DATENSPRUNG_CHANNEL]], currentTime );
+    #endif
     rc4ValuesIndex++;
     for (chan = 0; chan < 8; chan++) {
       rcData4Values[chan][rc4ValuesIndex%4] = readRawRC(chan);

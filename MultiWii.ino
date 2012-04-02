@@ -401,6 +401,9 @@ void setup() {
     configurationLoop();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
+  #if defined(DATENSPRUNG_CHANNEL)
+  datensprung_reset();
+  #endif
 }
 
 // ******** Main Loop *********
@@ -621,9 +624,8 @@ void loop () {
     #endif
     if (rcOptions[BOXPASSTHRU]) {passThruMode = 1;}
     else passThruMode = 0;
-
     #ifdef DATENSPRUNG_CHANNEL
-      datensprung_feed( rcData[DATENSPRUNG_CHANNEL], currentTime );
+      /* process any received datensprung frames */
       datensprung_process();
     #endif
   } else { // not in rc loop

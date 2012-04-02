@@ -30,7 +30,7 @@ void datensprung_feed(uint16_t value, uint32_t timestamp) {
 		last_change = timestamp;
 	} else {
 		/* 90 ms without a state change indicates a reset condition */
-		if (timestamp-last_change > 90*1000) {
+		if (timestamp-last_change > 90L*1000) {
 			decoder_reset();
 		}
 	}
@@ -38,9 +38,26 @@ void datensprung_feed(uint16_t value, uint32_t timestamp) {
 	last_rstate = state;
 }
 
+void datensprung_reset() {
+	decoder_reset();
+	datensprung_values.min = ~0;
+	datensprung_values.max = 0;
+}
+
+uint8_t datensprung_frame_verify(struct ds_frame_t *f) {
+	uint8_t sum = 0;
+	uint8_t i = 0;
+	for (i=0; i<sizeof(*f); i++) {
+		sum ^= ((uint8_t*)f)[i];
+	}
+	return (sum == 0);
+}
+
 void datensprung_process() {
 	struct ds_frame_t frame;
 	while (decoder_get_frame(&frame)) {
+		if (! datensprung_frame_verify(&frame)) continue;
+
 		/* evaluate the received frames */
 	}
 }
