@@ -2,6 +2,33 @@ extern "C" {
 #include "datensprung/decoder.c"
 };
 
+/* this code is used to store persistent flight assistance data,
+ * e.g. whether the ACC has been enabled by Datensprung frames
+ */
+#define DATENSPRUNG_FA_ACC 0
+#define DATENSPRUNG_FA_BARO 1
+static struct {
+	/* only settings masked with 1 are touched by Datensprung */
+	uint8_t mask;
+	uint8_t values;
+} datensprung_fa_settings = {0,0};
+
+static void datensprung_apply_setting(uint8_t bit, uint8_t *var) {
+	// Do we touch the setting?
+	if ( ~datensprung_fa_settings.mask & 1<<bit) return;
+
+	if (datensprung_fa_settings.values & 1<<bit) {
+		*var = 1;
+	} else {
+		*var = 0;
+	}
+}
+
+void datensprung_apply_fa_settings() {
+	datensprung_apply_setting(DATENSPRUNG_FA_ACC, &rcOptions[BOXACC]);
+	datensprung_apply_setting(DATENSPRUNG_FA_BARO, &rcOptions[BOXBARO]);
+}
+
 static struct {
 	uint16_t min;
 	uint16_t max;
@@ -50,5 +77,20 @@ void datensprung_process() {
 		if (! decoder_verify_frame(&frame)) continue;
 
 		/* evaluate the received frames */
+
+		switch (frame.cmd) {
+			case 0xFA:
+				/* flight assistance data has 4 payload bytes:
+				 * mask data (which systems do we wish to control?)
+				 * mask data mask [sic] (which mask bits do we want to change?)
+				 * value data (which systems do we want enabled?)
+				 * value data mask (which states do we want to switch?)
+				 */
+				datensprung_fa_settings.mask = (datensprung_fa_settings.mask & ~frame.data[1]) | (frame.data[0] & frame.data[1]);
+				datensprung_fa_settings.values = (datensprung_fa_settings.values & ~frame.data[3]) | (frame.data[2] & frame.data[3]);
+				break;
+			default:
+				break;
+		}
 	}
 }

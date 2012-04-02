@@ -573,6 +573,11 @@ void loop () {
        |(rcData[AUX4]<1300)<<9 | (1300<rcData[AUX4] && rcData[AUX4]<1700)<<10| (rcData[AUX4]>1700)<<11) & activate[i])>0;
     }
 
+    #ifdef DATENSPRUNG_CHANNEL
+    /* apply flight assistance settings from Datensprung data link */
+    datensprung_apply_fa_settings();
+    #endif
+
     // note: if FAILSAFE is disable, failsafeCnt > 5*FAILSAVE_DELAY is always false
     if (( rcOptions[BOXACC] || (failsafeCnt > 5*FAILSAVE_DELAY) ) && (ACC || nunchuk)) { 
       // bumpless transfer to Level mode
