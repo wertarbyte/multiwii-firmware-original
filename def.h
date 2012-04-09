@@ -319,10 +319,10 @@
   #define SERVO_4_PINMODE            ;                   // Not available
   #define SERVO_4_PIN_HIGH           ;
   #define SERVO_4_PIN_LOW            ;
-  #define SERVO_5_PINMODE            pinMode(3,OUTPUT); // BI LEFT
+  #define SERVO_5_PINMODE            pinMode(11,OUTPUT); // BI LEFT
   #define SERVO_5_PIN_HIGH           PORTD|= 1<<3;
   #define SERVO_5_PIN_LOW            PORTD &= ~(1<<3);
-  #define SERVO_6_PINMODE            pinMode(11,OUTPUT); // TRI REAR
+  #define SERVO_6_PINMODE            pinMode(3,OUTPUT); // TRI REAR
   #define SERVO_6_PIN_HIGH           PORTB |= 1<<3;
   #define SERVO_6_PIN_LOW            PORTB &= ~(1<<3);
   #define SERVO_7_PINMODE            pinMode(10,OUTPUT); // new motor pin 10
@@ -435,8 +435,22 @@
 #if defined(QUADRINO_ZOOM)
   #define ITG3200
   #define BMA180
-  #define BMP085  // note, can be also #define MS561101BA  on some versions
-  //#define MS561101BA
+  #define BMP085
+  #define HMC5883
+  #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -X; accADC[PITCH]  = -Y; accADC[YAW]  =  Z;}
+  #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] =  Y; gyroADC[PITCH] = -X; gyroADC[YAW] = -Z;}
+  #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  =  X; magADC[PITCH]  =  Y; magADC[YAW]  = -Z;}
+  #define BMA180_ADDRESS 0x80
+  #define ITG3200_ADDRESS 0XD0
+  #define STABLEPIN_PINMODE pinMode (A2, OUTPUT);
+  #define STABLEPIN_ON PORTC |= (1<<2);
+  #define STABLEPIN_OFF PORTC &= ~(1<<2);
+#endif
+
+#if defined(QUADRINO_ZOOM_MS)
+  #define ITG3200
+  #define BMA180
+  #define MS561101BA
   #define HMC5883
   #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -X; accADC[PITCH]  = -Y; accADC[YAW]  =  Z;}
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] =  Y; gyroADC[PITCH] = -X; gyroADC[YAW] = -Z;}
@@ -554,6 +568,7 @@
   #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -Y; accADC[PITCH]  =  X; accADC[YAW]  =  Z;}
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] = -X; gyroADC[PITCH] = -Y; gyroADC[YAW] = -Z;}
   #define MPU6050_ADDRESS 0xD2
+  #undef INTERNAL_I2C_PULLUPS
 #endif
 
 #if defined(MONGOOSE1_0)
@@ -562,8 +577,8 @@
   #define BMP085
   #define HMC5883
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] = -Y; gyroADC[PITCH] =  X; gyroADC[YAW] = -Z;}
-  #define ACC_ORIENTATION(Y, X, Z)  {accADC[ROLL]  =  X; accADC[PITCH]  = -Y; accADC[YAW]  =  Z;}
-  #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  = -Y; magADC[PITCH]  = -X; magADC[YAW]  = -Z;}
+  #define ACC_ORIENTATION(Y, X, Z)  {accADC[ROLL]  =  Y; accADC[PITCH]  =  X; accADC[YAW]  =  Z;}
+  #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  = -X; magADC[PITCH]  = -Y; magADC[YAW]  = -Z;}
   #define ADXL345_ADDRESS 0xA6
   #define ITG3200_ADDRESS 0XD0
   #define BMP085_ADDRESS 0xEE
@@ -585,6 +600,63 @@
   #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -X; accADC[PITCH]  = -Y; accADC[YAW]  =  Z;}
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] =  Y; gyroADC[PITCH] = -X; gyroADC[YAW] = -Z;}
   #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  =  X; magADC[PITCH]  =  Y; magADC[YAW]  = -Z;}
+#endif
+
+#if defined(OPENLRSv2MULTI)
+  #define ITG3200
+  #define ADXL345
+  #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -X; accADC[PITCH]  = -Y; accADC[YAW]  =  Z;}
+  #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] =  Y; gyroADC[PITCH] = -X; gyroADC[YAW] = -Z;}
+  #define ADXL345_ADDRESS 0xA6
+  #define ITG3200_ADDRESS 0XD0
+  
+  #define SDO_pin A0
+  #define SDI_pin A1        
+  #define SCLK_pin A2 
+  #define IRQ_pin 2
+  #define nSel_pin 4
+  #define IRQ_interrupt 0
+  
+  #define  nIRQ_1 (PIND & 0x04)==0x04 //D2
+  #define  nIRQ_0 (PIND & 0x04)==0x00 //D2
+  
+  #define  nSEL_on PORTD |= 0x10 //D4
+  #define  nSEL_off PORTD &= 0xEF //D4
+  
+  #define  SCK_on PORTC |= 0x04 //C2
+  #define  SCK_off PORTC &= 0xFB //C2
+  
+  #define  SDI_on PORTC |= 0x02 //C1
+  #define  SDI_off PORTC &= 0xFD //C1
+  
+  #define  SDO_1 (PINC & 0x01) == 0x01 //C0
+  #define  SDO_0 (PINC & 0x01) == 0x00 //C0
+  
+  //#### Other interface pinouts ###
+  #define GREEN_LED_pin 13
+  #define RED_LED_pin A3
+
+  #define Red_LED_ON  PORTC |= _BV(3);
+  #define Red_LED_OFF  PORTC &= ~_BV(3);
+  
+  #define Green_LED_ON  PORTB |= _BV(5);
+  #define Green_LED_OFF  PORTB &= ~_BV(5);
+  
+  #define NOP() __asm__ __volatile__("nop") 
+ 
+  #define RF22B_PWRSTATE_READY    01 
+  #define RF22B_PWRSTATE_TX        0x09 
+  #define RF22B_PWRSTATE_RX       05 
+  #define RF22B_Rx_packet_received_interrupt   0x02 
+  #define RF22B_PACKET_SENT_INTERRUPT  04 
+  #define RF22B_PWRSTATE_POWERDOWN  00    
+  
+  unsigned char ItStatus1, ItStatus2;  
+  typedef struct   
+  { 
+   unsigned char reach_1s    : 1; 
+  } FlagType; 
+  FlagType               Flag;   
 #endif
 
 #if defined(ADXL345) || defined(BMA020) || defined(BMA180) || defined(NUNCHACK) || defined(MMA7455) || defined(ADCACC) || defined(LIS3LV02) || defined(LSM303DLx_ACC) || defined(MPU6050)
@@ -617,10 +689,22 @@
   #define GPS 0
 #endif
 
-#if defined (AIRPLANE) && defined(PROMINI) 
-  #define POWERPIN_PINMODE           ;
-  #define POWERPIN_ON                ;
-  #define POWERPIN_OFF               ;
+#if defined(SRF02) || defined(SRF08) || defined(SRF10) || defined(SRC235)
+  #define SONAR 1
+#else
+  #define SONAR 0
+#endif
+
+#if defined (AIRPLANE) || defined(HELICOPTER) && defined(PROMINI) 
+  #if defined(D12_POWER)
+    #define SERVO_4_PINMODE            ;  // D12
+    #define SERVO_4_PIN_HIGH           ;
+    #define SERVO_4_PIN_LOW            ;
+  #else
+    #define POWERPIN_PINMODE           ;
+    #define POWERPIN_ON                ;
+    #define POWERPIN_OFF               ;
+  #endif
 #endif
 
 #if defined(TRI)
@@ -768,7 +852,7 @@
 #endif
 
 #if !(defined(DISPLAY_2LINES)) && !(defined(DISPLAY_MULTILINE))
-  #if (defined(LCD_VT100))
+  #if (defined(LCD_VT100)) || (defined(OLED_I2C_128x64))
     #define DISPLAY_MULTILINE
   #else
     #define DISPLAY_2LINES
@@ -779,14 +863,14 @@
 /* Error Checking Section */
 /**************************/
 
-#if (defined(LCD_CONF) || defined(LCD_TELEMETRY)) && !(defined(LCD_SERIAL3W) || defined(LCD_TEXTSTAR) || defined(LCD_VT100) || defined(LCD_ETPP) || defined(LCD_LCD03))
-  #error "LCD_CONF or LCD_TELEMETRY defined, and choice of LCD not defined.  Uncomment one of LCD_SERIAL3W or LCD_TEXTSTAR or LCD_VT100 or LCD_ETPP or LCD_LCD03"
+#if (defined(LCD_CONF) || defined(LCD_TELEMETRY)) && !(defined(LCD_SERIAL3W) || defined(LCD_TEXTSTAR) || defined(LCD_VT100) || defined(LCD_ETPP) || defined(LCD_LCD03) || defined(OLED_I2C_128x64) )
+  #error "LCD_CONF or LCD_TELEMETRY defined, and choice of LCD not defined.  Uncomment one of LCD_SERIAL3W or LCD_TEXTSTAR or LCD_VT100 or LCD_ETPP or LCD_LCD03 or OLED_I2C_128x64"
 #endif
 
 #if defined(POWERMETER) && !(defined(VBAT))
-  	#error "to use powermeter, you must also define and configure VBAT"
+        #error "to use powermeter, you must also define and configure VBAT"
 #endif
 
 #if defined(LCD_TELEMETRY_AUTO) && !(defined(LCD_TELEMETRY))
- 	#error "to use automatic telemetry, you MUST also define and configure LCD_TELEMETRY"
+        #error "to use automatic telemetry, you MUST also define and configure LCD_TELEMETRY"
 #endif
