@@ -193,6 +193,24 @@ size_t i2c_read_reg_to_buf(uint8_t add, uint8_t reg, void *buf, size_t size) {
 	return i2c_read_to_buf(add, buf, size);
 }
 
+/* transform a series of bytes from big endian to little
+ * endian and vice versa.
+ */
+void swap_endianness(void *buf, size_t size) {
+	/* we swap in-place, so we only have to
+	 * place _one_ element on a temporary tray
+	 */
+	uint8_t tray;
+	uint8_t *from;
+	uint8_t *to;
+	/* keep swapping until the pointers have assed each other */
+	for (from = (uint8_t*)buf, to = &from[size-1]; from < to; from++, to--) {
+		tray = *from;
+		*from = *to;
+		*to = tray;
+	}
+}
+
 void i2c_getSixRawADC(uint8_t add, uint8_t reg) {
 	i2c_read_reg_to_buf(add, reg, &rawADC, 6);
 }
