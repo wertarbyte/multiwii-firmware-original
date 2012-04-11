@@ -379,8 +379,9 @@ static int32_t  pressure;
 
 static struct {
   // sensor registers from the BOSCH BMP085 datasheet
-  int16_t  ac1, ac2, ac3, b1, b2, mb, mc, md;
+  int16_t  ac1, ac2, ac3;
   uint16_t ac4, ac5, ac6;
+  int16_t b1, b2, mb, mc, md;
   union {uint16_t val; uint8_t raw[2]; } ut; //uncompensated T
   union {uint32_t val; uint8_t raw[4]; } up; //uncompensated P
   uint8_t  state;
@@ -390,17 +391,14 @@ static struct {
 
 void i2c_BMP085_readCalibration(){
   delay(10);
-  bmp085_ctx.ac1 = i2c_BMP085_readIntRegister(0xAA);
-  bmp085_ctx.ac2 = i2c_BMP085_readIntRegister(0xAC);
-  bmp085_ctx.ac3 = i2c_BMP085_readIntRegister(0xAE);
-  bmp085_ctx.ac4 = i2c_BMP085_readIntRegister(0xB0);
-  bmp085_ctx.ac5 = i2c_BMP085_readIntRegister(0xB2);
-  bmp085_ctx.ac6 = i2c_BMP085_readIntRegister(0xB4);
-  bmp085_ctx.b1  = i2c_BMP085_readIntRegister(0xB6);
-  bmp085_ctx.b2  = i2c_BMP085_readIntRegister(0xB8);
-  bmp085_ctx.mb  = i2c_BMP085_readIntRegister(0xBA);
-  bmp085_ctx.mc  = i2c_BMP085_readIntRegister(0xBC);
-  bmp085_ctx.md  = i2c_BMP085_readIntRegister(0xBE);
+  /* read calibration data in one go */
+  size_t s_bytes = (uint8_t*)&bmp085_ctx.md - (uint8_t*)&bmp085_ctx.ac1 + sizeof(bmp085_ctx.ac1);
+  i2c_read_reg_to_buf(BMP085_ADDRESS, 0xAA, &bmp085_ctx.ac1, s_bytes);
+  /* now fix endianness */
+  int16_t *p;
+  for (p = &bmp085_ctx.ac1; p <= &bmp085_ctx.md; p++) {
+	swap_endianness(p, sizeof(*p));
+  }
 }
 
 void  Baro_init() {
