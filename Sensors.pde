@@ -269,7 +269,7 @@ void ACC_Common() {
       accZero[YAW]   = a[YAW]/400-acc_1G; // for nunchuk 200=1G
       accTrim[ROLL]   = 0;
       accTrim[PITCH]  = 0;
-      writeParams(); // write accZero in EEPROM
+      writeParams(1); // write accZero in EEPROM
     }
     calibratingA--;
   }
@@ -317,7 +317,7 @@ void ACC_Common() {
         accZero[YAW]   = b[YAW]/50-acc_1G; // for nunchuk 200=1G
         accTrim[ROLL]   = 0;
         accTrim[PITCH]  = 0;
-        writeParams(); // write accZero in EEPROM
+        writeParams(1); // write accZero in EEPROM
       }
   #endif
   accADC[ROLL]  -=  accZero[ROLL] ;
@@ -946,7 +946,7 @@ void Mag_getADC() {
       tCal = 0;
       for(axis=0;axis<3;axis++)
         magZero[axis] = (magZeroTempMin[axis] + magZeroTempMax[axis])/2;
-      writeParams();
+      writeParams(1);
     }
   }
 }

@@ -42,10 +42,6 @@
 /* I2C DFRobot LED RING communication */
 //#define LED_RING
 
-/* This option should be uncommented if ACC Z is accurate enough when motors are running*/
-/* should now be ok with BMA020 and BMA180 ACC */
-#define TRUSTED_ACCZ
-
 /* This will activate the ACC-Inflight calibration if unchecked */  
 //#define INFLIGHT_ACC_CALIBRATION
 
