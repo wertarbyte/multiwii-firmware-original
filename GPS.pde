@@ -1,5 +1,10 @@
 #if GPS
 
+#if defined(GPS_TINY)
+#define GPS_TINY_TWI_ADD 0x11
+#include "tiny-gps/nmea_structs.h"
+#endif
+
 void GPS_NewData() {
   #if defined(I2C_GPS)
     static uint8_t _i2c_gps_status;
@@ -67,8 +72,19 @@ void GPS_NewData() {
       GPS_distanceToHome = 0;
       GPS_directionToHome = 0;
       GPS_numSat = 0;
-    }
-  #endif     
+    }  
+  #endif
+
+  #if defined(GPS_TINY)
+  struct nmea_data_t nmea;
+  /* copy GPS data to local struct */
+  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea, sizeof(nmea));
+  GPS_numSat = nmea.sats;
+  GPS_fix = (nmea.quality > 0);
+  GPS_latitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nmea.lat);
+  GPS_longitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nmea.lon);
+  GPS_altitude = nmea.alt.m;
+  #endif
 
   #if defined(GPS_SERIAL)
     while (SerialAvailable(GPS_SERIAL)) {
@@ -130,6 +146,24 @@ void GPS_distance(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, uint16
   *dist = 6372795 / 100000.0 * PI/180*(sqrt(sq(dLat) + sq(dLon)));
   *bearing = 180/PI*(atan2(dLon,dLat));
 }
+
+#if defined (GPS_TINY)
+int32_t GPS_coord_to_decimal(struct coord *c) {
+	uint32_t res = 0;
+	/* at first, calculate everything in [minutes * 100000] */
+	res += (uint32_t)c->deg * 60 * 100000L;
+	res += (uint32_t)c->min      * 100000L;
+	/* add up the BCD fractions */
+	uint8_t i;
+	for (i=0; i<NMEA_MINUTE_FRACTS; i++) {
+		uint8_t b = c->frac[i/2];
+		uint8_t n = (i%2 ? b&0x0F : b>>4);
+		res += n*(100000L/(i+1));
+	}
+	/* now scale it back to [degrees * 100000] */
+	return res/60;
+}
+#endif
 
 #if defined(GPS_SERIAL)
 

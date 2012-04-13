@@ -73,6 +73,11 @@
    http://code.google.com/p/i2c-gps-nav/ */
 //#define I2C_GPS
 
+/* I2C GPS device made with serial GPS receiver and ATTiny2313
+ * https://github.com/wertarbyte/tiny-gps/
+ */
+//#define GPS_TINY
+
 /* GPS data readed from Misio-OSD  ( EXPERIMENTAL )
    If we have Misio-OSD with GPS module connected to OSD we can use this GPS for navigation purpose. 
    Working with OSD firmware v0.66 or newer.
