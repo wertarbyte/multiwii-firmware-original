@@ -194,12 +194,7 @@ size_t i2c_read_reg_to_buf(uint8_t add, uint8_t reg, void *buf, size_t size) {
 }
 
 void i2c_getSixRawADC(uint8_t add, uint8_t reg) {
-  i2c_rep_start(add);
-  i2c_write(reg);         // Start multiple read at the reg register
-  i2c_rep_start(add +1);  // I2C read direction => I2C address + 1
-  for(uint8_t i = 0; i < 5; i++)
-    rawADC[i]=i2c_readAck();
-  rawADC[5]= i2c_readNak();
+	i2c_read_reg_to_buf(add, reg, &rawADC, 6);
 }
 
 void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
@@ -210,10 +205,9 @@ void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
 }
 
 uint8_t i2c_readReg(uint8_t add, uint8_t reg) {
-  i2c_rep_start(add+0);  // I2C write direction
-  i2c_write(reg);        // register selection
-  i2c_rep_start(add+1);  // I2C read direction
-  return i2c_readNak();  // Read single register and return value
+	uint8_t val;
+	i2c_read_reg_to_buf(add, reg, &val, 1);
+	return val;
 }
 
 // ****************
