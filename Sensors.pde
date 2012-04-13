@@ -143,18 +143,22 @@ void i2c_write(uint8_t data ) {
   waitTransmissionI2C();
 }
 
+uint8_t i2c_read(uint8_t ack) {
+	TWCR = (1<<TWINT) | (1<<TWEN) | (ack? (1<<TWEA) : 0);
+	waitTransmissionI2C();
+	uint8_t r = TWDR;
+	if (!ack) {
+		i2c_stop();
+	}
+	return r;
+}
+
 uint8_t i2c_readAck() {
-  TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-  waitTransmissionI2C();
-  return TWDR;
+	return i2c_read(1);
 }
 
 uint8_t i2c_readNak(void) {
-  TWCR = (1<<TWINT) | (1<<TWEN);
-  waitTransmissionI2C();
-  uint8_t r = TWDR;
-  i2c_stop();
-  return r;
+	return i2c_read(0);
 }
 
 void waitTransmissionI2C() {
@@ -168,6 +172,25 @@ void waitTransmissionI2C() {
       break;
     }
   }
+}
+
+size_t i2c_read_to_buf(uint8_t add, void *buf, size_t size) {
+	i2c_rep_start(add | 0x01);	// I2C read direction
+	size_t bytes_read = 0;
+	uint8_t *b = (uint8_t*)buf;
+	while (size--) {
+		/* acknowledge all but the final byte */
+		*b++ = i2c_read(size > 0);
+		/* TODO catch I2C errors here and abort */
+		bytes_read++;
+	}
+	return bytes_read;
+}
+
+size_t i2c_read_reg_to_buf(uint8_t add, uint8_t reg, void *buf, size_t size) {
+	i2c_rep_start(add & ~0x01);	// I2C write direction
+	i2c_write(reg);			// register selection
+	return i2c_read_to_buf(add, buf, size);
 }
 
 void i2c_getSixRawADC(uint8_t add, uint8_t reg) {
