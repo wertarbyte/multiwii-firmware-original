@@ -1335,10 +1335,9 @@ uint16_t i2c_try_readReg(uint8_t add, uint8_t reg) {
 
 // read a 16bit unsigned int from the i2c bus
 uint16_t i2c_readReg16(int8_t addr, int8_t reg) {
-  i2c_rep_start(addr<<1);
-  i2c_write(reg);
-  i2c_rep_start((addr<<1) | 1);
-  return (i2c_readAck() <<8) | i2c_readNak();
+  uint8_t b[2];
+  i2c_read_reg_to_buf(addr, reg, &b, sizeof(b));
+  return (b[0]<<8) | b[1];
 }
 
 void i2c_srf08_change_addr(int8_t current, int8_t moveto) {
