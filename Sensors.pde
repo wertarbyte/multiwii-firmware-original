@@ -409,17 +409,6 @@ void  Baro_init() {
   i2c_BMP085_UT_Read();
 }
 
-// read a 16 bit register
-int16_t i2c_BMP085_readIntRegister(uint8_t r) {
-  union {int16_t val; uint8_t raw[2]; } data;
-  i2c_rep_start(BMP085_ADDRESS<<1);
-  i2c_write(r);
-  i2c_rep_start((BMP085_ADDRESS<<1) | 1);//I2C read direction => 1
-  data.raw[1] = i2c_readAck();
-  data.raw[0] = i2c_readNak();
-  return data.val;
-}
-
 // read uncompensated temperature value: send command first
 void i2c_BMP085_UT_Start() {
   i2c_writeReg(BMP085_ADDRESS,0xf4,0x2e);
