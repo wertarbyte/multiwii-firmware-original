@@ -57,10 +57,17 @@
   #define V_BATPIN                   A3    // Analog PIN 3
   #define PSENSORPIN                 A2    // Analog PIN 2
   
-  #define SOFT_PWM_1_PIN_HIGH        PORTD |= 1<<5;
-  #define SOFT_PWM_1_PIN_LOW         PORTD &= ~(1<<5);
-  #define SOFT_PWM_2_PIN_HIGH        PORTD |= 1<<6;
-  #define SOFT_PWM_2_PIN_LOW         PORTD &= ~(1<<6);
+  #if defined(A0_A1_PIN_HEX) && (NUMBER_MOTOR < 8)
+    #define SOFT_PWM_1_PIN_HIGH        PORTC |= 1<<0;
+    #define SOFT_PWM_1_PIN_LOW         PORTC &= ~(1<<0);
+    #define SOFT_PWM_2_PIN_HIGH        PORTC |= 1<<1;
+    #define SOFT_PWM_2_PIN_LOW         PORTC &= ~(1<<1);  
+  #else
+    #define SOFT_PWM_1_PIN_HIGH        PORTD |= 1<<5;
+    #define SOFT_PWM_1_PIN_LOW         PORTD &= ~(1<<5);
+    #define SOFT_PWM_2_PIN_HIGH        PORTD |= 1<<6;
+    #define SOFT_PWM_2_PIN_LOW         PORTD &= ~(1<<6);
+  #endif
   #define SOFT_PWM_3_PIN_HIGH        PORTC |= 1<<2;
   #define SOFT_PWM_3_PIN_LOW         PORTC &= ~(1<<2);
   #define SOFT_PWM_4_PIN_HIGH        PORTB |= 1<<4;
@@ -298,10 +305,17 @@
   #define V_BATPIN                   A3    // Analog PIN 3
   #define PSENSORPIN                 A2    // Analog PIN 2
   
-  #define SOFT_PWM_1_PIN_HIGH        PORTD |= 1<<5;
-  #define SOFT_PWM_1_PIN_LOW         PORTD &= ~(1<<5);
-  #define SOFT_PWM_2_PIN_HIGH        PORTD |= 1<<6;
-  #define SOFT_PWM_2_PIN_LOW         PORTD &= ~(1<<6);
+  #if defined(A0_A1_PIN_HEX) && (NUMBER_MOTOR < 8)
+    #define SOFT_PWM_1_PIN_HIGH        PORTC |= 1<<0;
+    #define SOFT_PWM_1_PIN_LOW         PORTC &= ~(1<<0);
+    #define SOFT_PWM_2_PIN_HIGH        PORTC |= 1<<1;
+    #define SOFT_PWM_2_PIN_LOW         PORTC &= ~(1<<1);  
+  #else
+    #define SOFT_PWM_1_PIN_HIGH        PORTD |= 1<<5;
+    #define SOFT_PWM_1_PIN_LOW         PORTD &= ~(1<<5);
+    #define SOFT_PWM_2_PIN_HIGH        PORTD |= 1<<6;
+    #define SOFT_PWM_2_PIN_LOW         PORTD &= ~(1<<6);
+  #endif
   #define SOFT_PWM_3_PIN_HIGH        PORTC |= 1<<2;
   #define SOFT_PWM_3_PIN_LOW         PORTC &= ~(1<<2);
   #define SOFT_PWM_4_PIN_HIGH        PORTB |= 1<<4;
@@ -407,6 +421,13 @@
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] =  Y; gyroADC[PITCH] = -X; gyroADC[YAW] = -Z;}
   #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  =  X; magADC[PITCH]  =  Y; magADC[YAW]  = -Z;}
   #define MPU6050_EN_I2C_BYPASS // MAG connected to the AUX I2C bus of MPU6050
+  #undef INTERNAL_I2C_PULLUPS
+#endif
+
+#if defined(NANOWII)
+  #define MPU6050
+  #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -Y; accADC[PITCH]  =  X; accADC[YAW]  =  Z;}
+  #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] = -X; gyroADC[PITCH] = -Y; gyroADC[YAW] = -Z;}
   #undef INTERNAL_I2C_PULLUPS
 #endif
 

@@ -1,19 +1,12 @@
 // 256 RX buffer is needed for GPS communication (64 or 128 was too short)
 // it avoids also modulo operations
-#if defined(PROMINI) 
-  uint8_t serialBufferRX[256][1];
-  volatile uint8_t serialHeadRX[1],serialTailRX[1];
-#endif
-#if defined(PROMICRO)
-  uint8_t serialBufferRX[256][2];
-  volatile uint8_t serialHeadRX[2],serialTailRX[2];
-  uint8_t usb_use_buf = 0;
-#endif
 #if defined(MEGA)
   uint8_t serialBufferRX[256][4];
   volatile uint8_t serialHeadRX[4],serialTailRX[4];
+#else
+  uint8_t serialBufferRX[256][1];
+  volatile uint8_t serialHeadRX[1],serialTailRX[1];
 #endif
-
 
 #define MSP_IDENT                100   //out message         multitype + version
 #define MSP_STATUS               101   //out message         cycletime & errors_count & sensor present & box activation
@@ -46,7 +39,7 @@
 #define MSP_DEBUG                254   //out message         debug1,debug2,debug3,debug4
 
 
-uint8_t checksum,stateMSP,indRX,inBuf[64];
+static uint8_t checksum,stateMSP,indRX,inBuf[64];
 
 uint32_t read32() {
   uint32_t t = inBuf[indRX++];
@@ -84,11 +77,6 @@ void serialCom() {
         inBuf[offset++] = c;
       } else {                                     // we have read all the payload
         if ( checksum == inBuf[dataSize] ) {       // we check is the computed checksum is ok
-          #if defined(PROMICRO)
-            usb_use_buf = 1; // enable USB buffer
-            serialHeadRX[0] = 0; // reset tail and head
-            serialTailRX[0] = 0;     
-          #endif
           switch(stateMSP) {                       // if yes, then we execute different code depending on the message code. read8/16/32 will look into the inBuf buffer
             case MSP_SET_RAW_RC:
               for(i=0;i<8;i++) {rcData[i] = read16();} break;
@@ -116,9 +104,6 @@ void serialCom() {
               #endif
               break;
           }
-          #if defined(PROMICRO)
-            usb_use_buf = 0; // disable USB buffer
-          #endif
         }
         stateMSP = 0;                              // in any case we reset the MSP state
       }
@@ -332,22 +317,17 @@ void serialize8(uint8_t a)  {
 
 #if !defined(PROMICRO)
   ISR_UART {
-    if( headTX != tailTX )
-      UDR0 = bufTX[tailTX++];       // Transmit next byte in the ring
-    if ( tailTX == headTX )         // Check if all data is transmitted
-      UCSR0B &= ~(1<<UDRIE0);       // Disable transmitter UDRE interrupt
+    if (headTX != tailTX) UDR0 = bufTX[tailTX++];  // Transmit next byte in the ring
+    if (tailTX == headTX) UCSR0B &= ~(1<<UDRIE0); // Check if all data is transmitted . if yes disable transmitter UDRE interrupt
   }
 #endif
 
-void UartSendData() {               // Data transmission acivated when the ring is not empty
-  #if !defined(PROMICRO)
-    UCSR0B |= (1<<UDRIE0);          // Enable transmitter UDRE interrupt
-  #else
+void UartSendData() {
+  #if defined(PROMICRO)
     USB_Send(USB_CDC_TX,bufTX,headTX);
     headTX = 0;
   #endif
 }
-
 
 void SerialOpen(uint8_t port, uint32_t baud) {
   uint8_t h = ((F_CPU  / 4 / baud -1) / 2) >> 8;
@@ -388,79 +368,54 @@ ISR(USART_RX_vect){
   if (i != serialTailRX[0]) {serialBufferRX[serialHeadRX[0]][0] = d; serialHeadRX[0] = i;}
 }
 #endif
-#if defined(MEGA)
-ISR(USART0_RX_vect){
-  uint8_t d = UDR0;
-  uint8_t i = serialHeadRX[0] + 1;
-  if (i != serialTailRX[0]) {serialBufferRX[serialHeadRX[0]][0] = d; serialHeadRX[0] = i;}
-}
-#endif
-#if defined(MEGA) || defined(PROMICRO)
-  #if !(defined(SPEKTRUM))
+
+#if (defined(MEGA) || defined(PROMICRO)) && !defined(SPEKTRUM)
   ISR(USART1_RX_vect){
     uint8_t d = UDR1;
     uint8_t i = serialHeadRX[1] + 1;
     if (i != serialTailRX[1]) {serialBufferRX[serialHeadRX[1]][1] = d; serialHeadRX[1] = i;}
   }
-  #endif
 #endif
 #if defined(MEGA)
-ISR(USART2_RX_vect){
-  uint8_t d = UDR2;
-  uint8_t i = serialHeadRX[2] + 1;
-  if (i != serialTailRX[2]) {serialBufferRX[serialHeadRX[2]][2] = d; serialHeadRX[2] = i;}
-}
-ISR(USART3_RX_vect){
-  uint8_t d = UDR3;
-  uint8_t i = serialHeadRX[3] + 1;
-  if (i != serialTailRX[3]) {serialBufferRX[serialHeadRX[3]][3] = d; serialHeadRX[3] = i;}
-}
+  ISR(USART0_RX_vect){
+    uint8_t d = UDR0;
+    uint8_t i = serialHeadRX[0] + 1;
+    if (i != serialTailRX[0]) {serialBufferRX[serialHeadRX[0]][0] = d; serialHeadRX[0] = i;}
+  }
+  ISR(USART2_RX_vect){
+    uint8_t d = UDR2;
+    uint8_t i = serialHeadRX[2] + 1;
+    if (i != serialTailRX[2]) {serialBufferRX[serialHeadRX[2]][2] = d; serialHeadRX[2] = i;}
+  }
+  ISR(USART3_RX_vect){
+    uint8_t d = UDR3;
+    uint8_t i = serialHeadRX[3] + 1;
+    if (i != serialTailRX[3]) {serialBufferRX[serialHeadRX[3]][3] = d; serialHeadRX[3] = i;}
+  }
 #endif
 
 uint8_t SerialRead(uint8_t port) {
-  #if !defined(PROMICRO)
-      uint8_t c = serialBufferRX[serialTailRX[port]][port];
-      if ((serialHeadRX[port] != serialTailRX[port])) serialTailRX[port] = serialTailRX[port] + 1;
-    #else
-      uint8_t c;
-      if(port == 0){
-        if(usb_use_buf && serialTailRX[0]<=serialHeadRX[0]){
-          c = serialBufferRX[0][serialTailRX[0]++]; // if USB buffer is enabled we give the stored values
-        }else{
-          // the direckt way without Serial... the usb serial stuff is uploaded anyway
-          c = USB_Recv(USB_CDC_RX);
-        }
-      }else{
-        c = serialBufferRX[serialTailRX[port]][port];
-        if ((serialHeadRX[port] != serialTailRX[port])) serialTailRX[port] = serialTailRX[port] + 1;        
-      }
-    #endif    
-    return c;
+  #if defined(PROMICRO)
+    if(port == 0) return USB_Recv(USB_CDC_RX);
+    port = 0;
+  #endif
+  uint8_t c = serialBufferRX[serialTailRX[port]][port];
+  if ((serialHeadRX[port] != serialTailRX[port])) serialTailRX[port] = serialTailRX[port] + 1;
+  return c;
 }
 
 uint8_t SerialAvailable(uint8_t port) {
- #if !defined(PROMICRO)
-    return serialHeadRX[port] - serialTailRX[port];
-  #else
-    if(port == 0){
-      if(usb_use_buf){
-        if(USB_Available(USB_CDC_RX)){
-          serialBufferRX[0][serialHeadRX[0]++] = USB_Recv(USB_CDC_RX); // if USB buffer is enabled we store all readings to it 
-        }
-        return serialHeadRX[0];
-      }else{
-        return USB_Available(USB_CDC_RX);
-      }
-    }else{
-      return serialHeadRX[port] - serialTailRX[port];
-    }
+  #if defined(PROMICRO)
+    if(port == 0) return USB_Available(USB_CDC_RX);
+    port = 0;
   #endif
+  return serialHeadRX[port] - serialTailRX[port];
 }
 
 void SerialWrite(uint8_t port,uint8_t c){
  switch (port) {
     case 0: serialize8(c);UartSendData(); break;                 // Serial0 TX is driven via a buffer and a background intterupt
-    #if defined(MEGA) || #defined(PROMICRO)
+    #if defined(MEGA) || defined(PROMICRO)
     case 1: while (!(UCSR1A & (1 << UDRE1))) ; UDR1 = c; break;  // Serial1 Serial2 and Serial3 TX are not driven via interrupts
     #endif
     #if defined(MEGA)
