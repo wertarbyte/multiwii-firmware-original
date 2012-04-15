@@ -78,10 +78,11 @@ void GPS_NewData() {
   #if defined(GPS_TINY)
   static uint8_t nmea_i = 0;
   static struct nmea_data_t nmea[2] = {0};
+  int16_t i2c_errors = i2c_errors_count;
   /* copy GPS data to local struct */
   i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea[!nmea_i], sizeof(*nmea));
-  /* did the data change? */
-  if (memcmp(&nmea[nmea_i], &nmea[!nmea_i], sizeof(*nmea)) != 0) {
+  /* did the data change? or did we generate any errors? */
+  if (memcmp(&nmea[nmea_i], &nmea[!nmea_i], sizeof(*nmea)) != 0 && i2c_errors == i2c_errors_count) {
     GPS_update = !GPS_update;
     nmea_i = !nmea_i;
 
