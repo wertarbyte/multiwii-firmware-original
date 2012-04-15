@@ -95,37 +95,28 @@ void GPS_NewData() {
 
   #if defined(GPS_SERIAL)
     while (SerialAvailable(GPS_SERIAL)) {
-     if (GPS_newFrame(SerialRead(GPS_SERIAL))) {
-        if (GPS_update == 1) GPS_update = 0; else GPS_update = 1;
-        if (GPS_fix == 1 && GPS_numSat > 3) {
-          if (GPS_fix_home == 0) {
-            GPS_fix_home = 1;
-            GPS_latitude_home  = GPS_latitude;
-            GPS_longitude_home = GPS_longitude;
-          }
-          if (GPSModeHold == 1)
-            GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
-          else
-            GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
-        }
+      if (GPS_newFrame(SerialRead(GPS_SERIAL))) {
+        GPS_update = !GPS_update;
       }
     }
   #endif
 
   #if defined(GPS_FROM_OSD)
-    if(GPS_update) {
-      if (GPS_fix  && GPS_numSat > 3) {
-        if (GPS_fix_home == 0) {
-          GPS_fix_home = 1;
-          GPS_latitude_home  = GPS_latitude;
-          GPS_longitude_home = GPS_longitude;
-        }
-        if (GPSModeHold == 1)
-          GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
-        else
-          GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
-        }
-        GPS_update = 0;
+    GPS_update = !GPS_update;
+  #endif
+
+  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(GPS_TINY)
+    if (GPS_fix && GPS_numSat > 3) {
+      if (GPS_fix_home == 0) {
+        GPS_fix_home = 1;
+        GPS_latitude_home  = GPS_latitude;
+        GPS_longitude_home = GPS_longitude;
+      }
+      if (GPSModeHold == 1) {
+        GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
+      } else {
+        GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
+      }
     }
   #endif
 }
