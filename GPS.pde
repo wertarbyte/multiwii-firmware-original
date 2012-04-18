@@ -76,21 +76,21 @@ void GPS_NewData() {
   #endif
 
   #if defined(GPS_TINY)
-  static uint8_t nmea_i = 0;
-  static struct nmea_data_t nmea[2] = {0};
+  static struct nmea_data_t nmea = {0};
+  struct nmea_data_t nmea_new;
   int16_t i2c_errors = i2c_errors_count;
   /* copy GPS data to local struct */
-  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea[!nmea_i], sizeof(*nmea));
+  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea_new, sizeof(nmea_new));
   /* did the data change? or did we generate any errors? */
-  if (memcmp(&nmea[nmea_i], &nmea[!nmea_i], sizeof(*nmea)) != 0 && i2c_errors == i2c_errors_count) {
+  if (memcmp(&nmea, &nmea_new, sizeof(nmea)) != 0 && i2c_errors == i2c_errors_count) {
     GPS_update = !GPS_update;
-    nmea_i = !nmea_i;
+    nmea = nmea_new;
 
-    GPS_numSat = nmea[nmea_i].sats;
-    GPS_fix = (nmea[nmea_i].quality > 0);
-    GPS_latitude = (nmea[nmea_i].flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nmea[nmea_i].lat);
-    GPS_longitude = (nmea[nmea_i].flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nmea[nmea_i].lon);
-    GPS_altitude = nmea[nmea_i].alt.m;
+    GPS_numSat = nmea.sats;
+    GPS_fix = (nmea.quality > 0);
+    GPS_latitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nmea.lat);
+    GPS_longitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nmea.lon);
+    GPS_altitude = nmea.alt.m;
   }
   #endif
 
