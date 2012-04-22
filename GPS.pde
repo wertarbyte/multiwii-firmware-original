@@ -76,15 +76,13 @@ void GPS_NewData() {
   #endif
 
   #if defined(GPS_TINY)
-  static struct nmea_data_t nmea = {0};
-  struct nmea_data_t nmea_new;
+  struct nmea_data_t nmea;
   int16_t i2c_errors = i2c_errors_count;
   /* copy GPS data to local struct */
-  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea_new, sizeof(nmea_new));
-  /* did the data change? or did we generate any errors? */
-  if (memcmp(&nmea, &nmea_new, sizeof(nmea)) != 0 && i2c_errors == i2c_errors_count) {
+  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea, sizeof(nmea));
+  /* did we generate any errors? */
+  if (i2c_errors == i2c_errors_count) {
     GPS_update = !GPS_update;
-    nmea = nmea_new;
 
     GPS_numSat = nmea.sats;
     GPS_fix = (nmea.quality > 0);
