@@ -502,13 +502,29 @@ void loop () {
         if ( rcOptions[BOXARM] && okToArm ) {
 	  armed = 1;
 	  headFreeModeHold = heading;
-        } else if (armed) armed = 0;
+          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+          led_flasher_set_sequence(LED_FLASHER_SEQUENCE_ARMED);
+          #endif
+        } else if (armed) {
+          armed = 0;
+          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+          led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
+          #endif
+        }
         rcDelayCommand = 0;
       } else if ( (rcData[YAW] < MINCHECK || rcData[ROLL] < MINCHECK)  && armed == 1) {
-        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == 20) {
+          armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+          led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
+          #endif
+        }
       } else if ( (rcData[YAW] > MAXCHECK || rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
         if (rcDelayCommand == 20) {
 	  armed = 1;
+          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+          led_flasher_set_sequence(LED_FLASHER_SEQUENCE_ARMED);
+          #endif
 	  headFreeModeHold = heading;
         }
      #ifdef LCD_TELEMETRY_AUTO
