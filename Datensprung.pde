@@ -8,6 +8,8 @@ extern "C" {
 #define DATENSPRUNG_FA_ACC 0
 #define DATENSPRUNG_FA_BARO 1
 #define DATENSPRUNG_FA_MAG 2
+#define DATENSPRUNG_FA_HEADFREE 3
+#define DATENSPRUNG_FA_GPSHOLD 4
 static struct {
 	/* only settings masked with 1 are touched by Datensprung */
 	uint8_t mask;
@@ -29,6 +31,8 @@ void datensprung_apply_fa_settings() {
 	datensprung_apply_setting(DATENSPRUNG_FA_ACC, &rcOptions[BOXACC]);
 	datensprung_apply_setting(DATENSPRUNG_FA_BARO, &rcOptions[BOXBARO]);
 	datensprung_apply_setting(DATENSPRUNG_FA_MAG, &rcOptions[BOXMAG]);
+	datensprung_apply_setting(DATENSPRUNG_FA_HEADFREE, &rcOptions[BOXHEADFREE]);
+	datensprung_apply_setting(DATENSPRUNG_FA_GPSHOLD, &rcOptions[BOXGPSHOLD]);
 }
 
 static struct {
