@@ -77,6 +77,7 @@
  * https://github.com/wertarbyte/tiny-gps/
  */
 //#define GPS_TINY
+//#define GPS_TINY_SONAR
 
 /* GPS data readed from Misio-OSD  ( EXPERIMENTAL )
    If we have Misio-OSD with GPS module connected to OSD we can use this GPS for navigation purpose. 

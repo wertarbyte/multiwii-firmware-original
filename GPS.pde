@@ -3,6 +3,8 @@
 #if defined(GPS_TINY)
 #define GPS_TINY_TWI_ADD 0x11
 #include "tiny-gps/nmea_structs.h"
+#include "tiny-gps/sonar_structs.h"
+#include "tiny-gps/nav_structs.h"
 #endif
 
 void GPS_NewData() {
@@ -76,19 +78,23 @@ void GPS_NewData() {
   #endif
 
   #if defined(GPS_TINY)
-  struct nmea_data_t nmea;
+  struct nav_data_t nav;
   int16_t i2c_errors = i2c_errors_count;
   /* copy GPS data to local struct */
-  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nmea, sizeof(nmea));
+  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nav, sizeof(nav));
   /* did we generate any errors? */
   if (i2c_errors == i2c_errors_count) {
     GPS_update = !GPS_update;
 
-    GPS_numSat = nmea.sats;
-    GPS_fix = (nmea.quality > 0);
-    GPS_latitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nmea.lat);
-    GPS_longitude = (nmea.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nmea.lon);
-    GPS_altitude = nmea.alt.m;
+    GPS_numSat = nav.gps.sats;
+    GPS_fix = (nav.gps.quality > 0);
+    GPS_latitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lat);
+    GPS_longitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lon);
+    GPS_altitude = nav.gps.alt.m;
+
+    #if defined(GPS_TINY_SONAR)
+    sonarAlt = nav.sonar.distance;
+    #endif
   }
   #endif
 

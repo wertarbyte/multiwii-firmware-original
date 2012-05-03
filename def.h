@@ -693,7 +693,7 @@
   #define GPS 0
 #endif
 
-#if defined(SRF02) || defined(SRF08) || defined(SRF10) || defined(SRC235)
+#if defined(SRF02) || defined(SRF08) || defined(SRF10) || defined(SRC235) || defined(GPS_TINY_SONAR)
   #define SONAR 1
 #else
   #define SONAR 0
