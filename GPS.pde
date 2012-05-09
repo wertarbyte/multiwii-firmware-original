@@ -4,6 +4,7 @@
 #define GPS_TINY_TWI_ADD 0x11
 #include "tiny-gps/nmea_structs.h"
 #include "tiny-gps/sonar_structs.h"
+#include "tiny-gps/optical_structs.h"
 #include "tiny-gps/nav_structs.h"
 #endif
 
