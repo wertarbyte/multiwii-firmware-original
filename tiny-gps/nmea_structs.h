@@ -1,3 +1,6 @@
+#ifndef NMEA_STRUCTS_H
+#define NMEA_STRUCTS_H
+
 #define NMEA_MINUTE_FRACTS 4
 #define NMEA_ALTITUDE_FRACTS 2
 
@@ -41,3 +44,5 @@ struct nmea_data_t {
 	uint8_t quality;
 	uint8_t sats;
 };
+
+#endif
