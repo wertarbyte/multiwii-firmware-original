@@ -85,6 +85,7 @@ void GPS_NewData() {
   i2c_read_to_buf(GPS_TINY_TWI_ADD, &nav, sizeof(nav));
   /* did we generate any errors? */
   if (i2c_errors == i2c_errors_count) {
+    #if defined(GPS_TINY_GPS)
     GPS_update = !GPS_update;
 
     GPS_numSat = nav.gps.sats;
@@ -92,6 +93,7 @@ void GPS_NewData() {
     GPS_latitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lat);
     GPS_longitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lon);
     GPS_altitude = nav.gps.alt.m;
+    #endif
 
     #if defined(GPS_TINY_SONAR)
     sonarAlt = nav.sonar.distance;
@@ -111,7 +113,7 @@ void GPS_NewData() {
     GPS_update = !GPS_update;
   #endif
 
-  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(GPS_TINY)
+  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(GPS_TINY_GPS)
     if (GPS_fix && GPS_numSat > 3) {
       if (GPS_fix_home == 0) {
         GPS_fix_home = 1;
@@ -151,7 +153,7 @@ void GPS_distance(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, uint16
   *bearing = 180/PI*(atan2(dLon,dLat));
 }
 
-#if defined (GPS_TINY)
+#if defined (GPS_TINY_GPS)
 int32_t GPS_coord_to_decimal(struct coord *c) {
 	uint32_t res = 0;
 	/* at first, calculate everything in [minutes * 100000] */
