@@ -1,6 +1,6 @@
 #if GPS
 
-#if defined(GPS_TINY)
+#if defined(GPS_TINY_GPS)
 #include "tiny-gps/nmea_structs.h"
 #endif
 
