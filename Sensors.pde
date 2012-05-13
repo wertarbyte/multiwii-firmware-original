@@ -106,12 +106,9 @@
     #define MPU6050_DLPF_CFG   0
 #endif
 
-#if defined(GPS_TINY)
-#define GPS_TINY_TWI_ADD 0x11
-#include "tiny-gps/nmea_structs.h"
-#include "tiny-gps/sonar_structs.h"
-#include "tiny-gps/optical_structs.h"
-#include "tiny-gps/nav_structs.h"
+#if defined(TINY_GPS) | defined(TINY_GPS_SONAR)
+#define TINY_GPS_TWI_ADD 0x11
+#include "tiny-gps.h"
 #endif
 
 uint8_t rawADC[6];
@@ -1249,15 +1246,15 @@ uint8_t WMP_getRawADC() {
 }
 #endif
 
-#if defined(GPS_TINY)
+#if defined(TINY_GPS) | defined(TINY_GPS_SONAR)
 void tinygps_query(void) {
   struct nav_data_t nav;
   int16_t i2c_errors = i2c_errors_count;
   /* copy GPS data to local struct */
-  i2c_read_to_buf(GPS_TINY_TWI_ADD, &nav, sizeof(nav));
+  i2c_read_to_buf(TINY_GPS_TWI_ADD, &nav, sizeof(nav));
   /* did we generate any errors? */
   if (i2c_errors == i2c_errors_count) {
-    #if defined(GPS_TINY_GPS)
+    #if defined(TINY_GPS)
     GPS_update = !GPS_update;
 
     GPS_numSat = nav.gps.sats;
@@ -1267,7 +1264,7 @@ void tinygps_query(void) {
     GPS_altitude = nav.gps.alt.m;
     #endif
 
-    #if defined(GPS_TINY_SONAR)
+    #if defined(TINY_GPS_SONAR)
     sonarAlt = nav.sonar.distance;
     #endif
   }
@@ -1452,7 +1449,7 @@ void Sonar_update() {
   } 
 sonarAlt = srf08_ctx.range[0]; //tmp
 }
-#elif defined(GPS_TINY) & defined(GPS_TINY_SONAR)
+#elif defined(TINY_GPS_SONAR)
 inline void Sonar_init() {}
 void Sonar_update() {
 	tinygps_query();

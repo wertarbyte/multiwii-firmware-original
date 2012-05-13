@@ -1,7 +1,7 @@
 #if GPS
 
-#if defined(GPS_TINY_GPS)
-#include "tiny-gps/nmea_structs.h"
+#if defined(TINY_GPS)
+#include "tiny-gps.h"
 #endif
 
 void GPS_NewData() {
@@ -74,7 +74,7 @@ void GPS_NewData() {
     }  
   #endif
 
-  #if defined(GPS_TINY) & defined(GPS_TINY_GPS)
+  #if defined(TINY_GPS)
     tinygps_query();
   #endif
 
@@ -90,7 +90,7 @@ void GPS_NewData() {
     GPS_update = !GPS_update;
   #endif
 
-  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(GPS_TINY_GPS)
+  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(TINY_GPS)
     if (GPS_fix && GPS_numSat > 3) {
       if (GPS_fix_home == 0) {
         GPS_fix_home = 1;
@@ -130,7 +130,7 @@ void GPS_distance(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, uint16
   *bearing = 180/PI*(atan2(dLon,dLat));
 }
 
-#if defined (GPS_TINY_GPS)
+#if defined (TINY_GPS)
 int32_t GPS_coord_to_decimal(struct coord *c) {
 	uint32_t res = 0;
 	/* at first, calculate everything in [minutes * 100000] */

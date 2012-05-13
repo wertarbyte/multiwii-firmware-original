@@ -46,3 +46,31 @@ struct nmea_data_t {
 };
 
 #endif
+
+#ifndef OPTICAL_STRUCTS_H
+#define OPTICAL_STRUCTS_H
+
+struct optical_data_t {
+	int16_t dx;
+	int16_t dy;
+};
+
+#endif
+
+#ifndef SONAR_STRUCTS_H
+#define SONAR_STRUCTS_H
+
+struct sonar_data_t {
+	uint16_t distance;
+};
+
+#endif
+
+#ifndef NAV_STRUCTS_H
+#define NAV_STRUCTS_H
+struct nav_data_t {
+	struct nmea_data_t gps;
+	struct sonar_data_t sonar;
+	struct optical_data_t optical;
+};
+#endif

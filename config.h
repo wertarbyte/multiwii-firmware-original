@@ -76,9 +76,10 @@
 /* I2C GPS device made with serial GPS receiver and ATTiny2313
  * https://github.com/wertarbyte/tiny-gps/
  */
-//#define GPS_TINY
-//#define GPS_TINY_GPS
-//#define GPS_TINY_SONAR
+/* get GPS data from Tiny-GPS */
+//#define TINY_GPS
+/* get sonar data from Tiny-GPS */
+//#define TINY_GPS_SONAR
 
 /* GPS data readed from Misio-OSD  ( EXPERIMENTAL )
    If we have Misio-OSD with GPS module connected to OSD we can use this GPS for navigation purpose. 
