@@ -373,8 +373,8 @@ void computeRC() {
     #if defined(SBUS)
       readSBus();
     #endif
-    #if defined(DATENSPRUNG_CHANNEL)
-      datensprung_feed( rcValue[rcChannel[DATENSPRUNG_CHANNEL]], currentTime );
+    #if defined(DATENSCHLAG_CHANNEL)
+      datenschlag_feed( rcValue[rcChannel[DATENSCHLAG_CHANNEL]] );
     #endif
     rc4ValuesIndex++;
     for (chan = 0; chan < 8; chan++) {

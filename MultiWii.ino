@@ -401,8 +401,8 @@ void setup() {
     configurationLoop();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
-  #if defined(DATENSPRUNG_CHANNEL)
-  datensprung_reset();
+  #if defined(DATENSCHLAG_CHANNEL)
+  datenschlag_reset();
   #endif
 }
 
@@ -573,9 +573,9 @@ void loop () {
        |(rcData[AUX4]<1300)<<9 | (1300<rcData[AUX4] && rcData[AUX4]<1700)<<10| (rcData[AUX4]>1700)<<11) & activate[i])>0;
     }
 
-    #ifdef DATENSPRUNG_CHANNEL
-    /* apply flight assistance settings from Datensprung data link */
-    datensprung_apply_fa_settings();
+    #ifdef DATENSCHLAG_CHANNEL
+    /* apply flight assistance settings from Datenschlag data link */
+    datenschlag_apply_fa_settings();
     #endif
 
     // note: if FAILSAFE is disable, failsafeCnt > 5*FAILSAVE_DELAY is always false
@@ -629,9 +629,9 @@ void loop () {
     #endif
     if (rcOptions[BOXPASSTHRU]) {passThruMode = 1;}
     else passThruMode = 0;
-    #ifdef DATENSPRUNG_CHANNEL
-      /* process any received datensprung frames */
-      datensprung_process();
+    #ifdef DATENSCHLAG_CHANNEL
+      /* process any received Datenschlag frames */
+      datenschlag_process();
     #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
