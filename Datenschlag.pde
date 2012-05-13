@@ -131,9 +131,9 @@ void datenschlag_reset() {
 
 void datenschlag_process() {
 	struct ds_frame_t frame;
-	debug4 = frame.cmd;
 	while (decoder_get_frame(&frame)) {
 		if (! decoder_verify_frame(&frame)) continue;
+		debug4 = frame.cmd;
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {

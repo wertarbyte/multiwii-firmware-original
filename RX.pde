@@ -1,4 +1,12 @@
 volatile uint16_t rcValue[18] = {1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502}; // interval [1000;2000]
+
+#if defined(DATENSCHLAG_CHANNEL)
+#define DS_INPUT_LENGTH 10
+volatile uint16_t ds_input[DS_INPUT_LENGTH];
+volatile uint8_t ds_input_w = 0;
+volatile uint8_t ds_input_r = 0;
+#endif
+
 #if defined(SERIAL_SUM_PPM)
   static uint8_t rcChannel[8] = {SERIAL_SUM_PPM};
 #elif defined(SBUS)
@@ -211,6 +219,10 @@ void configureReceiver() {
      if (!(pin & 1<<4)) {     //indicates if the bit 4 of the arduino port [B0-B7] is not at a high state (so that we match here only descending PPM pulse)
     #endif
       dTime = cTime-edgeTime; if (900<dTime && dTime<2200) rcValue[0] = dTime; // just a verification: the value must be in the range [1000;2000] + some margin
+    #if defined(DATENSCHLAG_CHANNEL)
+      ds_input[ds_input_w++] = dTime;
+      if (ds_input_w >= DS_INPUT_LENGTH) ds_input_w = 0;
+    #endif
     } else edgeTime = cTime;    // if the bit 2 is at a high state (ascending PPM pulse), we memorize the time
   }
   #endif
@@ -374,7 +386,10 @@ void computeRC() {
       readSBus();
     #endif
     #if defined(DATENSCHLAG_CHANNEL)
-      datenschlag_feed( rcValue[rcChannel[DATENSCHLAG_CHANNEL]] );
+      while (ds_input_r != ds_input_w) {
+        datenschlag_feed( ds_input[ds_input_r++] );
+	if (ds_input_r >= DS_INPUT_LENGTH) ds_input_r = 0;
+      }
     #endif
     rc4ValuesIndex++;
     for (chan = 0; chan < 8; chan++) {
