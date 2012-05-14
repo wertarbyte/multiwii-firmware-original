@@ -1,7 +1,7 @@
 #if GPS
 
 #if defined(TINY_GPS)
-#include "tiny-gps.h"
+#include "tinygps.h"
 #endif
 
 void GPS_NewData() {

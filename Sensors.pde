@@ -108,7 +108,7 @@
 
 #if defined(TINY_GPS) | defined(TINY_GPS_SONAR)
 #define TINY_GPS_TWI_ADD 0x11
-#include "tiny-gps.h"
+#include "tinygps.h"
 #endif
 
 uint8_t rawADC[6];
