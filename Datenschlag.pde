@@ -9,7 +9,7 @@ struct ds_frame_t {
 #define DS_FRAME_BUFFER_SIZE 10
 /* ring buffer and positions for reader and writer */
 static struct ds_frame_t ds_buffer[DS_FRAME_BUFFER_SIZE];
-/* byte position in the current frame */
+/* nibble position in the current frame */
 static uint8_t ds_buffer_pos = 0;
 static uint8_t ds_w_pos = 0;
 static uint8_t ds_r_pos = 0;
@@ -17,12 +17,13 @@ static uint8_t ds_r_pos = 0;
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
 		uint8_t *f = (uint8_t *) &ds_buffer[ds_w_pos];
-		if (ds_buffer_pos%2) {
-			f[ds_buffer_pos/2] = input<<4;
+		if (ds_buffer_pos%2 == 0) {
+			f[ds_buffer_pos/2] = input&0x0F;
 		} else {
-			f[ds_buffer_pos/2] |= input&0x0F;
+			f[ds_buffer_pos/2] |= input<<4;
 		}
 		ds_buffer_pos++;
+		/* finished a complete frame? */
 		if (ds_buffer_pos == 2*sizeof(*ds_buffer)) {
 			ds_w_pos++;
 			ds_buffer_pos = 0;
@@ -100,27 +101,32 @@ static struct {
 } datenschlag_calib = {~0, 0};
 
 void datenschlag_feed(uint16_t value) {
+	static uint16_t last_token = 0;
+	/* let the calibration decay over time */
+	if (datenschlag_calib.min < ~0) datenschlag_calib.min++;
+	if (datenschlag_calib.max >  0) datenschlag_calib.max--;
 	/* calibrate */
 	if (value < datenschlag_calib.min) datenschlag_calib.min = value;
 	if (value > datenschlag_calib.max) datenschlag_calib.max = value;
 
-	/* calculate the byte value of our signal */
+	/* calculate the nibble value of our signal */
 
 	/* we need to map the value in the range from min to max into an
-	 * interval from 0 to 257:
-	 * 0     == minimum calibration
-	 * 257   == maximum calibration
-	 * 1-256 == byte value (+1)
+	 * interval from 0 to 0x0F+2:
+	 * 0         == minimum calibration (and nibble ack)
+	 * 0x0F+2    == maximum calibration (and frame start)
+	 * 1-0x0F+1  == payload nibble value (+1)
 	 */
-	uint32_t d = value-datenschlag_calib.min;
+	uint32_t input = value-datenschlag_calib.min;
 	uint32_t span = datenschlag_calib.max-datenschlag_calib.min;
-	uint16_t v = (d*257/span);
-
-	if (v == 0 || v == 257) {
+	uint32_t o_max = 0x0F+2;
+	uint16_t v = (input+span/o_max/2)*o_max/span;
+	if (v == 0x0F+2) {
 		decoder_reset();
-	} else {
-		decoder_feed(v-1);
+	} else if (last_token != v && last_token > 0 && last_token < 0x0F+2) {
+		decoder_feed(last_token-1);
 	}
+	last_token = v;
 }
 
 void datenschlag_reset() {
@@ -133,7 +139,6 @@ void datenschlag_process() {
 	struct ds_frame_t frame;
 	while (decoder_get_frame(&frame)) {
 		if (! decoder_verify_frame(&frame)) continue;
-		debug4 = frame.cmd;
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
@@ -153,8 +158,9 @@ void datenschlag_process() {
 				break;
 #endif
 			case 0xDE:
-				debug1 = frame.data[1];
-				debug2 = frame.data[2];
+				/* debugging data */
+				debug1 = frame.data[0];
+				debug2 = frame.data[1];
 				break;
 			default:
 				break;

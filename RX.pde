@@ -376,7 +376,7 @@ uint16_t readRawRC(uint8_t chan) {
   #endif
   return data; // We return the value correctly copied when the IRQ's where disabled
 }
-    
+
 void computeRC() {
   static int16_t rcData4Values[8][4], rcDataMean[8];
   static uint8_t rc4ValuesIndex = 0;
@@ -388,7 +388,7 @@ void computeRC() {
     #if defined(DATENSCHLAG_CHANNEL)
       while (ds_input_r != ds_input_w) {
         datenschlag_feed( ds_input[ds_input_r++] );
-	if (ds_input_r >= DS_INPUT_LENGTH) ds_input_r = 0;
+        if (ds_input_r >= DS_INPUT_LENGTH) ds_input_r = 0;
       }
     #endif
     rc4ValuesIndex++;
