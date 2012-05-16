@@ -96,6 +96,45 @@ void datenschlag_apply_fa_settings() {
 }
 
 static struct {
+	/* only channels masked with 1 are touched by Datensprung */
+	uint8_t mask;
+	/* is the aux channel non-neutral? */
+	uint8_t active;
+	/* is the switch up or down? */
+	uint8_t up;
+} datenschlag_aux = {0,0,0};
+
+void datenschlag_process_aux(struct ds_frame_t *f) {
+	datenschlag_aux.mask   = f->data[0];
+	datenschlag_aux.active = f->data[1];
+	datenschlag_aux.up     = f->data[2];
+}
+
+void datenschlag_apply_aux(void) {
+	for (uint8_t i=0; i<4; i++) {
+		if (!(datenschlag_aux.mask & 1<<i)) continue;
+		uint16_t v = 1500;
+		if (datenschlag_aux.active & 1<<i) {
+			v += ((datenschlag_aux.up & 1<<i) ? 500 : -500);
+		}
+		switch (i) {
+			case 0:
+				rcData[AUX1] = v;
+				break;
+			case 1:
+				rcData[AUX2] = v;
+				break;
+			case 2:
+				rcData[AUX3] = v;
+				break;
+			case 3:
+				rcData[AUX4] = v;
+				break;
+		}
+	}
+}
+
+static struct {
 	uint16_t min;
 	uint16_t max;
 } datenschlag_calib = {~0, 0};
@@ -162,6 +201,9 @@ void datenschlag_process() {
 				debug1 = frame.data[0];
 				debug2 = frame.data[1];
 				break;
+			case 0xAC:
+				/* AUX channel switches */
+				datenschlag_process_aux(&frame);
 			default:
 				break;
 		}

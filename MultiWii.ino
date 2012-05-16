@@ -438,6 +438,9 @@ void loop () {
       datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL));
     #endif
     computeRC();
+    #if defined(DATENSCHLAG_CHANNEL)
+      datenschlag_apply_aux();
+    #endif
     // Failsafe routine - added by MIS
     #if defined(FAILSAFE)
       if ( failsafeCnt > (5*FAILSAVE_DELAY) && armed==1) {                  // Stabilize, and set Throttle to specified level
