@@ -374,9 +374,6 @@ void computeRC() {
     #if defined(SBUS)
       readSBus();
     #endif
-    #if defined(DATENSCHLAG_CHANNEL)
-      datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL);
-    #endif
     rc4ValuesIndex++;
     for (chan = 0; chan < 8; chan++) {
       rcData4Values[chan][rc4ValuesIndex%4] = readRawRC(chan);

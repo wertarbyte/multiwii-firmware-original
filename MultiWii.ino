@@ -408,7 +408,7 @@ void setup() {
 
 // ******** Main Loop *********
 void loop () {
-  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
+  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at RC_FREQ Hz) the sticks must be maintained to run or switch off motors
   uint8_t axis,i;
   int16_t error,errorAngle;
   int16_t delta,deltaSum;
@@ -427,8 +427,16 @@ void loop () {
     Read_OpenLRS_RC();
   #endif 
 
-  if (currentTime > rcTime ) { // 50Hz
-    rcTime = currentTime + 20000;
+  #if defined(DATENSCHLAG_CHANNEL)
+    #define RC_FREQ 100
+  #else
+    #define RC_FREQ 50
+  #endif
+  if (currentTime > rcTime ) { // >50Hz
+    rcTime = currentTime + (1000000L/RC_FREQ);
+    #if defined(DATENSCHLAG_CHANNEL)
+      datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL));
+    #endif
     computeRC();
     // Failsafe routine - added by MIS
     #if defined(FAILSAFE)
@@ -443,20 +451,20 @@ void loop () {
       }
       failsafeCnt++;
     #endif
-    // end of failsave routine - next change is made with RcOptions setting
+    // end of failsafe routine - next change is made with RcOptions setting
     if (rcData[THROTTLE] < MINCHECK) {
       errorGyroI[ROLL] = 0; errorGyroI[PITCH] = 0; errorGyroI[YAW] = 0;
       errorAngleI[ROLL] = 0; errorAngleI[PITCH] = 0;
       rcDelayCommand++;
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
           calibratingG=400;
           #if GPS 
             GPS_reset_home_position();
           #endif
         }
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] > MAXCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
           #ifdef TRI
             servo[5] = 1500; // we center the yaw servo in conf mode
             writeServos();
@@ -478,7 +486,7 @@ void loop () {
       }
       #if defined(INFLIGHT_ACC_CALIBRATION)  
         else if (armed == 0 && rcData[YAW] < MINCHECK && rcData[PITCH] > MAXCHECK && rcData[ROLL] > MAXCHECK){
-          if (rcDelayCommand == 20){
+          if (rcDelayCommand == (20*RC_FREQ/50)){
             if (AccInflightCalibrationMeasurementDone){                // trigger saving into eeprom after landing
               AccInflightCalibrationMeasurementDone = 0;
               AccInflightCalibrationSavetoEEProm = 1;
@@ -500,15 +508,15 @@ void loop () {
         } else if (armed) armed = 0;
         rcDelayCommand = 0;
       } else if ( (rcData[YAW] < MINCHECK || rcData[ROLL] < MINCHECK)  && armed == 1) {
-        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == (20*RC_FREQ/50)) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK || rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
 	  armed = 1;
 	  headFreeModeHold = heading;
         }
      #ifdef LCD_TELEMETRY_AUTO
       } else if (rcData[ROLL] < MINCHECK && rcData[PITCH] > MAXCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
            if (telemetry_auto) {
               telemetry_auto = 0;
               telemetry = 0;
@@ -520,10 +528,10 @@ void loop () {
         rcDelayCommand = 0;
     } else if (rcData[THROTTLE] > MAXCHECK && armed == 0) {
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK) {        // throttle=max, yaw=left, pitch=min
-        if (rcDelayCommand == 20) calibratingA=400;
+        if (rcDelayCommand == (20*RC_FREQ/50)) calibratingA=400;
         rcDelayCommand++;
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] < MINCHECK) { // throttle=max, yaw=right, pitch=min  
-        if (rcDelayCommand == 20) calibratingM=1; // MAG calibration request
+        if (rcDelayCommand == (20*RC_FREQ/50)) calibratingM=1; // MAG calibration request
         rcDelayCommand++;
       } else if (rcData[PITCH] > MAXCHECK) {
          accTrim[PITCH]+=2;writeParams(1);
