@@ -59,7 +59,7 @@
 //#define RCOPTIONSBEEP        //uncomment this if you want the buzzer to beep at any rcOptions change on channel Aux1 to Aux4
 
 /* use Datenschlag framework to encode/decode binary data via AUX2 channel */
-//#define DATENSCHLAG_CHANNEL
+//#define DATENSCHLAG_CHANNEL AUX2
 
 /* GPS using a SERIAL port
    only available on MEGA boards (this might be possible on 328 based boards in the future)
