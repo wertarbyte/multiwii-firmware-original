@@ -42,6 +42,19 @@
 /* I2C DFRobot LED RING communication */
 //#define LED_RING
 
+/* Landing lights
+ *
+ * Use an output pin to control landing lights.
+ * They can be switched automatically when used in conjunction
+ * with altitude data from a sonar unit.
+ */
+//#define LANDING_LIGHTS_DDR DDRC
+//#define LANDING_LIGHTS_PORT PORTC
+//#define LANDING_LIGHTS_BIT PC0
+
+/* altitude above ground (in cm) as reported by sonar */
+//#define LANDING_LIGHTS_AUTO_ALTITUDE 50
+
 /* This will activate the ACC-Inflight calibration if unchecked */  
 //#define INFLIGHT_ACC_CALIBRATION
 
