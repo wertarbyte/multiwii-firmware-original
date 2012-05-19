@@ -61,7 +61,7 @@ struct optical_data_t {
 #define SONAR_STRUCTS_H
 
 struct sonar_data_t {
-	uint16_t distance;
+	int16_t distance;
 };
 
 #endif
