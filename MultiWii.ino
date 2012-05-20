@@ -11,7 +11,7 @@ March  2012     V2.0
 #include "config.h"
 #include "def.h"
 #include <avr/pgmspace.h>
-#define  VERSION  200
+#define  VERSION  201
 
 /*********** RC alias *****************/
 #define ROLL       0
@@ -74,7 +74,6 @@ static int32_t  EstAlt;             // in cm
 static int16_t  BaroPID = 0;
 static int32_t  AltHold;
 static int16_t  errorAltitudeI = 0;
-static uint8_t  buzzerState = 0;
 static uint8_t  toggleBeep = 0;
 static int16_t  debug1,debug2,debug3,debug4;
 static int16_t  sonarAlt; //to think about the unit
@@ -128,7 +127,10 @@ static int16_t rcData[8];          // interval [1000;2000]
 static int16_t rcCommand[4];       // interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW 
 static uint8_t rcRate8;
 static uint8_t rcExpo8;
-static int16_t lookupRX[7];       // lookup table for expo & RC rate
+static uint8_t thrMid8;
+static uint8_t thrExpo8;
+static int16_t lookupPitchRollRC[6];// lookup table for expo & RC rate PITCH+ROLL
+static int16_t lookupThrottleRC[11];// lookup table for expo & mid THROTTLE
 volatile uint8_t rcFrameComplete; // for serial rc receiver Spektrum
 static uint8_t pot_P,pot_I; // OpenLRS onboard potentiometers for P and I trim or other usages
 
@@ -166,13 +168,13 @@ static uint16_t activate[CHECKBOXITEMS];
 // GPS
 // **********************
 static int32_t  GPS_latitude,GPS_longitude;
-static int32_t  GPS_latitude_home,GPS_longitude_home;
-static int32_t  GPS_latitude_hold,GPS_longitude_hold;
+static int32_t  GPS_latitude_home,GPS_longitude_home,GPS_altitude_home;
+static int32_t  GPS_latitude_hold,GPS_longitude_hold,GPS_altitude_hold;
 static uint8_t  GPS_fix , GPS_fix_home = 0;
 static uint8_t  GPS_numSat;
 static uint16_t GPS_distanceToHome,GPS_distanceToHold;       // distance to home or hold point in meters
 static int16_t  GPS_directionToHome,GPS_directionToHold;     // direction to home or hol point in degrees
-static uint16_t GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s
+static int16_t  GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s
 static uint8_t  GPS_update = 0;                              // it's a binary toogle to distinct a GPS position update
 static int16_t  GPS_angle[2] = { 0, 0};                      // it's the angles that must be applied for GPS correction
 
@@ -194,43 +196,31 @@ void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
 
 void annexCode() { // this code is excetuted at each loop and won't interfere with control loop if it lasts less than 650 microseconds
   static uint32_t buzzerTime,calibratedAccTime;
-  #if defined(LCD_TELEMETRY)
-   static uint16_t telemetryTimer = 0, telemetryAutoTimer = 0;
-  #endif
-  #if defined(LCD_TELEMETRY_AUTO)
-   static uint8_t telemetryAutoIndex = 0;
-   static char telemetryAutoSequence []  = LCD_TELEMETRY_AUTO;
-  #endif
-  #ifdef VBAT
-    static uint8_t vbatTimer = 0;
-  #endif
+  uint16_t tmp,tmp2;
   static uint8_t  buzzerFreq;         // delay between buzzer ring
   uint8_t axis,prop1,prop2;
-  #if defined(POWERMETER_HARD)
-    uint16_t pMeterRaw;               // used for current reading
-    static uint16_t psensorTimer = 0;
-  #endif
 
+  #define BREAKPOINT 1500
   // PITCH & ROLL only dynamic PID adjustemnt,  depending on throttle value
-  if   (rcData[THROTTLE]<1500) {
+  if   (rcData[THROTTLE]<BREAKPOINT) {
     prop2 = 100;
   } else {
     if (rcData[THROTTLE]<2000) {
-      prop2 = 100 - (uint16_t)dynThrPID*(rcData[THROTTLE]-1500)/500;
+      prop2 = 100 - (uint16_t)dynThrPID*(rcData[THROTTLE]-BREAKPOINT)/(2000-BREAKPOINT);
     } else {
       prop2 = 100 - dynThrPID;
     }
   }
 
   for(axis=0;axis<3;axis++) {
-    uint16_t tmp = min(abs(rcData[axis]-MIDRC),500);
+    tmp = min(abs(rcData[axis]-MIDRC),500);
     #if defined(DEADBAND)
       if (tmp>DEADBAND) { tmp -= DEADBAND; }
       else { tmp=0; }
     #endif
     if(axis!=2) { //ROLL & PITCH
-      uint16_t tmp2 = tmp/100;
-      rcCommand[axis] = lookupRX[tmp2] + (tmp-tmp2*100) * (lookupRX[tmp2+1]-lookupRX[tmp2]) / 100;
+      tmp2 = tmp/100;
+      rcCommand[axis] = lookupPitchRollRC[tmp2] + (tmp-tmp2*100) * (lookupPitchRollRC[tmp2+1]-lookupPitchRollRC[tmp2]) / 100;
       prop1 = 100-(uint16_t)rollPitchRate*tmp/500;
       prop1 = (uint16_t)prop1*prop2/100;
     } else {      // YAW
@@ -241,9 +231,12 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     dynD8[axis] = (uint16_t)D8[axis]*prop1/100;
     if (rcData[axis]<MIDRC) rcCommand[axis] = -rcCommand[axis];
   }
-  rcCommand[THROTTLE] = MINTHROTTLE + (int32_t)(MAXTHROTTLE-MINTHROTTLE)* (rcData[THROTTLE]-MINCHECK)/(2000-MINCHECK);
+  tmp = constrain(rcData[THROTTLE],MINCHECK,2000);
+  tmp = (uint32_t)(tmp-MINCHECK)*1000/(2000-MINCHECK); // [MINCHECK;2000] -> [0;1000]
+  tmp2 = tmp/100;
+  rcCommand[THROTTLE] = lookupThrottleRC[tmp2] + (tmp-tmp2*100) * (lookupThrottleRC[tmp2+1]-lookupThrottleRC[tmp2]) / 100; // [0;1000] -> expo -> [MINTHROTTLE;MAXTHROTTLE]
 
-  if(headFreeMode) {
+  if(headFreeMode) { //to optimize
     float radDiff = (heading - headFreeModeHold) * 0.0174533f; // where PI/180 ~= 0.0174533
     float cosDiff = cos(radDiff);
     float sinDiff = sin(radDiff);
@@ -253,21 +246,24 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   }
 
   #if defined(POWERMETER_HARD)
+    uint16_t pMeterRaw;               // used for current reading
+    static uint16_t psensorTimer = 0;
     if (! (++psensorTimer % PSENSORFREQ)) {
-     pMeterRaw =  analogRead(PSENSORPIN);
-     powerValue = ( PSENSORNULL > pMeterRaw ? PSENSORNULL - pMeterRaw : pMeterRaw - PSENSORNULL); // do not use abs(), it would induce implicit cast to uint and overrun
-     if ( powerValue < 333) {  // only accept reasonable values. 333 is empirical
-     #ifdef LOG_VALUES
+      pMeterRaw =  analogRead(PSENSORPIN);
+      powerValue = ( PSENSORNULL > pMeterRaw ? PSENSORNULL - pMeterRaw : pMeterRaw - PSENSORNULL); // do not use abs(), it would induce implicit cast to uint and overrun
+      if ( powerValue < 333) {  // only accept reasonable values. 333 is empirical
+      #ifdef LOG_VALUES
         if (powerValue > powerMax) powerMax = powerValue;
-     #endif
-     } else {
+      #endif
+      } else {
         powerValue = 333;
-     }        
-     pMeter[PMOTOR_SUM] += (uint32_t) powerValue;
-  }
+      }        
+      pMeter[PMOTOR_SUM] += (uint32_t) powerValue;
+    }
   #endif
 
   #if defined(VBAT)
+    static uint8_t vbatTimer = 0;
     static uint8_t ind = 0;
     uint16_t vbatRaw = 0;
     static uint16_t vbatRawArray[8];
@@ -282,7 +278,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     #endif
                        )  || (NO_VBAT>vbat)                              ) // ToLuSe
     {                                          // VBAT ok AND powermeter ok, buzzer off
-      buzzerFreq = 0; buzzerState = 0;
+      buzzerFreq = 0;
     #if defined(POWERMETER)
     } else if (pMeter[PMOTOR_SUM] > pAlarm) {                             // sound alarm for powermeter
       buzzerFreq = 4;
@@ -308,6 +304,10 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     }
   #endif
 
+  #if defined(LED_FLASHER)
+    switch_led_flasher();
+  #endif
+
   if ( currentTime > calibratedAccTime ) {
     if (smallAngle25 == 0) {
       calibratedACC = 0; // the multi uses ACC and is not calibrated or is too much inclinated
@@ -325,12 +325,16 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   #endif
 
   #ifdef LCD_TELEMETRY_AUTO
+    static char telemetryAutoSequence []  = LCD_TELEMETRY_AUTO;
+    static uint8_t telemetryAutoIndex = 0;
+    static uint16_t telemetryAutoTimer = 0;
     if ( (telemetry_auto) && (! (++telemetryAutoTimer % LCD_TELEMETRY_AUTO_FREQ) )  ){
       telemetry = telemetryAutoSequence[++telemetryAutoIndex % strlen(telemetryAutoSequence)];
       LCDclear(); // make sure to clear away remnants
     }
   #endif  
   #ifdef LCD_TELEMETRY
+    static uint16_t telemetryTimer = 0;
     if (! (++telemetryTimer % LCD_TELEMETRY_FREQ)) {
       #if (LCD_TELEMETRY_DEBUG+0 > 0)
         telemetry = LCD_TELEMETRY_DEBUG;
@@ -371,6 +375,18 @@ void setup() {
   BUZZERPIN_PINMODE;
   STABLEPIN_PINMODE;
   POWERPIN_OFF;
+  #if defined(ESC_CALIB_CANNOT_FLY) // <- to move in Output.pde, nothing to do here
+    /* this turns into a special version of MultiWii. Its only purpose it to try and calib all attached ESCs */
+    writeAllMotors(ESC_CALIB_HIGH);
+    delay(3000);
+    writeAllMotors(ESC_CALIB_LOW);
+    delay(500);
+    while (1) {
+      delay(5000);
+      blinkLED(2,20, 2);
+    }
+    exit; // statement never reached
+  #endif
   initOutput();
   readEEPROM();
   checkFirstTime();
@@ -401,6 +417,10 @@ void setup() {
     configurationLoop();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
+  #if defined(LED_FLASHER)
+    init_led_flasher();
+    led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
+  #endif
 }
 
 // ******** Main Loop *********
@@ -496,14 +516,25 @@ void loop () {
 	  headFreeModeHold = heading;
         } else if (armed) armed = 0;
         rcDelayCommand = 0;
-      } else if ( (rcData[YAW] < MINCHECK || rcData[ROLL] < MINCHECK)  && armed == 1) {
+      #ifdef ALLOW_ARM_DISARM_VIA_TX_YAW
+      } else if ( (rcData[YAW] < MINCHECK )  && armed == 1) {
         if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
-      } else if ( (rcData[YAW] > MAXCHECK || rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
+      } else if ( (rcData[YAW] > MAXCHECK ) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
         if (rcDelayCommand == 20) {
-	  armed = 1;
-	  headFreeModeHold = heading;
+          armed = 1;
+          headFreeModeHold = heading;
         }
-     #ifdef LCD_TELEMETRY_AUTO
+      #endif
+      #ifdef ALLOW_ARM_DISARM_VIA_TX_ROLL
+      } else if ( (rcData[ROLL] < MINCHECK)  && armed == 1) {
+        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+      } else if ( (rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
+        if (rcDelayCommand == 20) {
+          armed = 1;
+          headFreeModeHold = heading;
+        }
+#endif
+      #ifdef LCD_TELEMETRY_AUTO
       } else if (rcData[ROLL] < MINCHECK && rcData[PITCH] > MAXCHECK && armed == 0) {
         if (rcDelayCommand == 20) {
            if (telemetry_auto) {
@@ -620,7 +651,11 @@ void loop () {
       }
     #endif
     if (rcOptions[BOXPASSTHRU]) {passThruMode = 1;}
-    else passThruMode = 0;
+    else {passThruMode = 0;}
+    
+    #ifdef FIXEDWING 
+      headFreeMode = 0;
+    #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
     switch (taskOrder++ % 5) {

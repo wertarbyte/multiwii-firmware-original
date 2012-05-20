@@ -23,6 +23,7 @@
 #define MSP_PID                  112   //out message         up to 16 P I D (8 are used)
 #define MSP_BOX                  113   //out message         up to 16 checkbox (11 are used)
 #define MSP_MISC                 114   //out message         powermeter trig + 8 free for future use
+#define MSP_MOTOR_PINS           115   //out message         which pins are in use for motors & servos, for GUI 
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -44,8 +45,8 @@ static uint8_t checksum,stateMSP,indRX,inBuf[64];
 uint32_t read32() {
   uint32_t t = inBuf[indRX++];
   t+= inBuf[indRX++]<<8;
-  t+= inBuf[indRX++]<<16;
-  t+= inBuf[indRX++]<<24;
+  t+= (uint32_t)inBuf[indRX++]<<16;
+  t+= (uint32_t)inBuf[indRX++]<<24;
   return t;
 }
 
@@ -97,7 +98,9 @@ void serialCom() {
               rcExpo8 = read8();
               rollPitchRate = read8();
               yawRate = read8();
-              dynThrPID = read8(); break;
+              dynThrPID = read8();
+              thrMid8 = read8();
+              thrExpo8 = read8();break;
             case MSP_SET_MISC:
               #if defined(POWERMETER)
                 powerTrigger1 = read16() / PLEVELSCALE; // we rely on writeParams() to compute corresponding pAlarm value
@@ -186,12 +189,14 @@ void serialCom() {
               serialize16(intPowerMeterSum);
               tailSerialReply();break;
             case MSP_RC_TUNING:
-              headSerialReply(c,5);
+              headSerialReply(c,7);
               serialize8(rcRate8);
               serialize8(rcExpo8);
               serialize8(rollPitchRate);
               serialize8(yawRate);
               serialize8(dynThrPID);
+              serialize8(thrMid8);
+              serialize8(thrExpo8);
               tailSerialReply();break;
             case MSP_PID:
               headSerialReply(c,3*PIDITEMS);
@@ -205,9 +210,12 @@ void serialCom() {
               headSerialReply(c,2);
               serialize16(intPowerTrigger1);
               tailSerialReply();break;
+            case MSP_MOTOR_PINS:
+              headSerialReply(c,8);
+              for(i=0;i<8;i++) {serialize8(PWM_PIN[i]);}
+              tailSerialReply();break;
             case MSP_RESET_CONF:
-              checkNewConf++;checkFirstTime();
-              checkNewConf--;checkFirstTime();break;
+              checkNewConf++;checkFirstTime();break;
             case MSP_ACC_CALIBRATION:
               calibratingA=400;break;
             case MSP_MAG_CALIBRATION:
@@ -283,6 +291,17 @@ void oldSerialCom(uint8_t sr) {
   }
 }
 
+// *******************************************************
+// For Teensy 2.0, these function emulate the API used for ProMicro
+// it cant have the same name as in the arduino API because it wont compile for the promini (eaven if it will be not compiled)
+// *******************************************************
+#if defined(TEENSY20)
+  unsigned char T_USB_Available(unsigned char ignored){
+    int n = Serial.available();
+    if (n > 255) n = 255;
+    return n;
+  }
+#endif
 
 // *******************************************************
 // Interrupt driven UART transmitter - using a ring buffer
@@ -324,7 +343,11 @@ void serialize8(uint8_t a)  {
 
 void UartSendData() {
   #if defined(PROMICRO)
-    USB_Send(USB_CDC_TX,bufTX,headTX);
+    #if !defined(TEENSY20)
+      USB_Send(USB_CDC_TX,bufTX,headTX);
+    #else
+      Serial.write(bufTX, headTX);
+    #endif
     headTX = 0;
   #endif
 }
@@ -396,7 +419,11 @@ ISR(USART_RX_vect){
 
 uint8_t SerialRead(uint8_t port) {
   #if defined(PROMICRO)
-    if(port == 0) return USB_Recv(USB_CDC_RX);
+    #if !defined(TEENSY20)
+      if(port == 0) return USB_Recv(USB_CDC_RX);
+    #else
+      if(port == 0) return Serial.read();
+    #endif
     port = 0;
   #endif
   uint8_t c = serialBufferRX[serialTailRX[port]][port];
@@ -406,7 +433,11 @@ uint8_t SerialRead(uint8_t port) {
 
 uint8_t SerialAvailable(uint8_t port) {
   #if defined(PROMICRO)
-    if(port == 0) return USB_Available(USB_CDC_RX);
+    #if !defined(TEENSY20)
+      if(port == 0) return USB_Available(USB_CDC_RX);
+    #else
+      if(port == 0) return T_USB_Available(USB_CDC_RX);
+    #endif
     port = 0;
   #endif
   return serialHeadRX[port] - serialTailRX[port];
