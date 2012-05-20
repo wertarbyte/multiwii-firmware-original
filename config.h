@@ -418,6 +418,10 @@
     /*******************  to input RC signal with the serial port  ************************/
       //#define RCSERIAL
 
+    /******* use Datenschlag framework to encode/decode binary data via AUX channel *******/
+      //#define DATENSCHLAG_CHANNEL AUX2
+
+
   /**************************************************************************************/
   /********          special ESC (wii-ESC) with extended range       ********************/
   /**************************************************************************************/

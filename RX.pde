@@ -6,7 +6,6 @@
 //RAW RC values will be store here
 volatile uint16_t rcValue[18] = {1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502}; // interval [1000;2000]
 
-
 #if defined(SERIAL_SUM_PPM) //Channel order for PPM SUM RX Configs
   static uint8_t rcChannel[8] = {SERIAL_SUM_PPM};
 #elif defined(SBUS) //Channel order for SBUS RX Configs

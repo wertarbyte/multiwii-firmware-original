@@ -417,6 +417,9 @@ void setup() {
     configurationLoop();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
+  #if defined(DATENSCHLAG_CHANNEL)
+  datenschlag_reset();
+  #endif
   #if defined(LED_FLASHER)
     init_led_flasher();
     led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
@@ -425,7 +428,7 @@ void setup() {
 
 // ******** Main Loop *********
 void loop () {
-  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
+  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at RC_FREQ Hz) the sticks must be maintained to run or switch off motors
   uint8_t axis,i;
   int16_t error,errorAngle;
   int16_t delta,deltaSum;
@@ -444,9 +447,20 @@ void loop () {
     Read_OpenLRS_RC();
   #endif 
 
-  if (currentTime > rcTime ) { // 50Hz
-    rcTime = currentTime + 20000;
+  #if defined(DATENSCHLAG_CHANNEL)
+    #define RC_FREQ 100
+  #else
+    #define RC_FREQ 50
+  #endif
+  if (currentTime > rcTime ) { // >50Hz
+    rcTime = currentTime + (1000000L/RC_FREQ);
+    #if defined(DATENSCHLAG_CHANNEL)
+      datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL));
+    #endif
     computeRC();
+    #if defined(DATENSCHLAG_CHANNEL)
+      datenschlag_apply_aux();
+    #endif
     // Failsafe routine - added by MIS
     #if defined(FAILSAFE)
       if ( failsafeCnt > (5*FAILSAVE_DELAY) && armed==1) {                  // Stabilize, and set Throttle to specified level
@@ -460,20 +474,20 @@ void loop () {
       }
       failsafeCnt++;
     #endif
-    // end of failsave routine - next change is made with RcOptions setting
+    // end of failsafe routine - next change is made with RcOptions setting
     if (rcData[THROTTLE] < MINCHECK) {
       errorGyroI[ROLL] = 0; errorGyroI[PITCH] = 0; errorGyroI[YAW] = 0;
       errorAngleI[ROLL] = 0; errorAngleI[PITCH] = 0;
       rcDelayCommand++;
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
           calibratingG=400;
           #if GPS 
             GPS_reset_home_position();
           #endif
         }
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] > MAXCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
           #ifdef TRI
             servo[5] = 1500; // we center the yaw servo in conf mode
             writeServos();
@@ -495,7 +509,7 @@ void loop () {
       }
       #if defined(INFLIGHT_ACC_CALIBRATION)  
         else if (armed == 0 && rcData[YAW] < MINCHECK && rcData[PITCH] > MAXCHECK && rcData[ROLL] > MAXCHECK){
-          if (rcDelayCommand == 20){
+          if (rcDelayCommand == (20*RC_FREQ/50)){
             if (AccInflightCalibrationMeasurementDone){                // trigger saving into eeprom after landing
               AccInflightCalibrationMeasurementDone = 0;
               AccInflightCalibrationSavetoEEProm = 1;
@@ -518,25 +532,25 @@ void loop () {
         rcDelayCommand = 0;
       #ifdef ALLOW_ARM_DISARM_VIA_TX_YAW
       } else if ( (rcData[YAW] < MINCHECK )  && armed == 1) {
-        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == (20*RC_FREQ/50)) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK ) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
-        if (rcDelayCommand == 20) {
-          armed = 1;
-          headFreeModeHold = heading;
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
+	  armed = 1;
+	  headFreeModeHold = heading;
         }
       #endif
       #ifdef ALLOW_ARM_DISARM_VIA_TX_ROLL
       } else if ( (rcData[ROLL] < MINCHECK)  && armed == 1) {
-        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == (20*RC_FREQ/50)) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
           armed = 1;
           headFreeModeHold = heading;
         }
-#endif
+      #endif
       #ifdef LCD_TELEMETRY_AUTO
       } else if (rcData[ROLL] < MINCHECK && rcData[PITCH] > MAXCHECK && armed == 0) {
-        if (rcDelayCommand == 20) {
+        if (rcDelayCommand == (20*RC_FREQ/50)) {
            if (telemetry_auto) {
               telemetry_auto = 0;
               telemetry = 0;
@@ -548,10 +562,10 @@ void loop () {
         rcDelayCommand = 0;
     } else if (rcData[THROTTLE] > MAXCHECK && armed == 0) {
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK) {        // throttle=max, yaw=left, pitch=min
-        if (rcDelayCommand == 20) calibratingA=400;
+        if (rcDelayCommand == (20*RC_FREQ/50)) calibratingA=400;
         rcDelayCommand++;
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] < MINCHECK) { // throttle=max, yaw=right, pitch=min  
-        if (rcDelayCommand == 20) calibratingM=1; // MAG calibration request
+        if (rcDelayCommand == (20*RC_FREQ/50)) calibratingM=1; // MAG calibration request
         rcDelayCommand++;
       } else if (rcData[PITCH] > MAXCHECK) {
          accTrim[PITCH]+=2;writeParams(1);
@@ -608,6 +622,11 @@ void loop () {
        |(rcData[AUX4]<1300)<<9 | (1300<rcData[AUX4] && rcData[AUX4]<1700)<<10| (rcData[AUX4]>1700)<<11) & activate[i])>0;
     }
 
+    #ifdef DATENSCHLAG_CHANNEL
+    /* apply flight assistance settings from Datenschlag data link */
+    datenschlag_apply_fa_settings();
+    #endif
+
     // note: if FAILSAFE is disable, failsafeCnt > 5*FAILSAVE_DELAY is always false
     if (( rcOptions[BOXACC] || (failsafeCnt > 5*FAILSAVE_DELAY) ) && (ACC || nunchuk)) { 
       // bumpless transfer to Level mode
@@ -662,6 +681,10 @@ void loop () {
     
     #ifdef FIXEDWING 
       headFreeMode = 0;
+    #endif
+    #ifdef DATENSCHLAG_CHANNEL
+      /* process any received Datenschlag frames */
+      datenschlag_process();
     #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
