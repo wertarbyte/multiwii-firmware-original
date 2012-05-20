@@ -514,31 +514,15 @@ void loop () {
         if ( rcOptions[BOXARM] && okToArm ) {
 	  armed = 1;
 	  headFreeModeHold = heading;
-          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
-          led_flasher_set_sequence(LED_FLASHER_SEQUENCE_ARMED);
-          #endif
-        } else if (armed) {
-          armed = 0;
-          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
-          led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
-          #endif
-        }
+        } else if (armed) armed = 0;
         rcDelayCommand = 0;
       #ifdef ALLOW_ARM_DISARM_VIA_TX_YAW
       } else if ( (rcData[YAW] < MINCHECK )  && armed == 1) {
-        if (rcDelayCommand == 20) {
-          armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
-          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
-          led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
-          #endif
-        }
+        if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK ) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
         if (rcDelayCommand == 20) {
           armed = 1;
           headFreeModeHold = heading;
-          #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
-          led_flasher_set_sequence(LED_FLASHER_SEQUENCE_ARMED);
-          #endif
         }
       #endif
       #ifdef ALLOW_ARM_DISARM_VIA_TX_ROLL
@@ -593,6 +577,13 @@ void loop () {
         rcDelayCommand = 0;
       }
     }
+    #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+    static uint8_t prev_armed = 0;
+    if (prev_armed != armed) {
+      led_flasher_set_sequence(armed ? LED_FLASHER_SEQUENCE_ARMED : LED_FLASHER_SEQUENCE);
+      prev_armed = armed;
+    }
+    #endif
     
     #if defined(INFLIGHT_ACC_CALIBRATION)
       if (AccInflightCalibrationArmed && armed == 1 && rcData[THROTTLE] > MINCHECK && !rcOptions[BOXARM] ){ // Copter is airborne and you are turning it off via boxarm : start measurement
