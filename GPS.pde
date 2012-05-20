@@ -1,5 +1,9 @@
 #if GPS
 
+#if defined(TINY_GPS)
+#include "tinygps.h"
+#endif
+
 void GPS_NewData() {
   #if defined(I2C_GPS)
     static uint8_t _i2c_gps_status;
@@ -68,45 +72,37 @@ void GPS_NewData() {
       GPS_distanceToHome = 0;
       GPS_directionToHome = 0;
       GPS_numSat = 0;
-    }
-  #endif     
+    }  
+  #endif
+
+  #if defined(TINY_GPS)
+    tinygps_query();
+  #endif
 
   #if defined(GPS_SERIAL)
     while (SerialAvailable(GPS_SERIAL)) {
-     if (GPS_newFrame(SerialRead(GPS_SERIAL))) {
-        if (GPS_update == 1) GPS_update = 0; else GPS_update = 1;
-        if (GPS_fix == 1 && GPS_numSat > 3) {
-          if (GPS_fix_home == 0) {
-            GPS_fix_home = 1;
-            GPS_latitude_home  = GPS_latitude;
-            GPS_longitude_home = GPS_longitude;
-            GPS_altitude_home  = GPS_altitude;
-            
-          }
-          if (GPSModeHold == 1)
-            GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
-          else
-            GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
-        }
+      if (GPS_newFrame(SerialRead(GPS_SERIAL))) {
+        GPS_update = !GPS_update;
       }
     }
   #endif
 
   #if defined(GPS_FROM_OSD)
-    if(GPS_update) {
-      if (GPS_fix  && GPS_numSat > 3) {
-        if (GPS_fix_home == 0) {
-          GPS_fix_home = 1;
-          GPS_latitude_home  = GPS_latitude;
-          GPS_longitude_home = GPS_longitude;
-          GPS_altitude_home  = GPS_altitude;
-        }
-        if (GPSModeHold == 1)
-          GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
-        else
-          GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
-        }
-        GPS_update = 0;
+    GPS_update = !GPS_update;
+  #endif
+
+  #if defined(GPS_FROM_OSD) || defined(GPS_SERIAL) || defined(TINY_GPS)
+    if (GPS_fix && GPS_numSat > 3) {
+      if (GPS_fix_home == 0) {
+        GPS_fix_home = 1;
+        GPS_latitude_home  = GPS_latitude;
+        GPS_longitude_home = GPS_longitude;
+      }
+      if (GPSModeHold == 1) {
+        GPS_distance(GPS_latitude_hold,GPS_longitude_hold,GPS_latitude,GPS_longitude, &GPS_distanceToHold, &GPS_directionToHold);
+      } else {
+        GPS_distance(GPS_latitude_home,GPS_longitude_home,GPS_latitude,GPS_longitude, &GPS_distanceToHome, &GPS_directionToHome);
+      }
     }
   #endif
 }
@@ -134,6 +130,24 @@ void GPS_distance(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, uint16
   *dist = 6372795 / 100000.0 * PI/180*(sqrt(sq(dLat) + sq(dLon)));
   *bearing = 180/PI*(atan2(dLon,dLat));
 }
+
+#if defined (TINY_GPS)
+int32_t GPS_coord_to_decimal(struct coord *c) {
+	uint32_t res = 0;
+	/* at first, calculate everything in [minutes * 100000] */
+	res += (uint32_t)c->deg * 60 * 100000L;
+	res += (uint32_t)c->min      * 100000L;
+	/* add up the BCD fractions */
+	uint8_t i;
+	for (i=0; i<NMEA_MINUTE_FRACTS; i++) {
+		uint8_t b = c->frac[i/2];
+		uint8_t n = (i%2 ? b&0x0F : b>>4);
+		res += n*(100000L/(i+1));
+	}
+	/* now scale it back to [degrees * 100000] */
+	return res/60;
+}
+#endif
 
 #if defined(GPS_SERIAL)
 
