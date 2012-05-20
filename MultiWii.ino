@@ -577,6 +577,13 @@ void loop () {
         rcDelayCommand = 0;
       }
     }
+    #if defined(LED_FLASHER) && defined(LED_FLASHER_SEQUENCE_ARMED)
+    static uint8_t prev_armed = 0;
+    if (prev_armed != armed) {
+      led_flasher_set_sequence(armed ? LED_FLASHER_SEQUENCE_ARMED : LED_FLASHER_SEQUENCE);
+      prev_armed = armed;
+    }
+    #endif
     
     #if defined(INFLIGHT_ACC_CALIBRATION)
       if (AccInflightCalibrationArmed && armed == 1 && rcData[THROTTLE] > MINCHECK && !rcOptions[BOXARM] ){ // Copter is airborne and you are turning it off via boxarm : start measurement
