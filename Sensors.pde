@@ -392,7 +392,7 @@ static struct {
 void i2c_BMP085_readCalibration(){
   delay(10);
   /* read calibration data in one go */
-  size_t s_bytes = offsetof(bmp085_ctx, md) - offsetof(bmp085_ctx.ac1) + sizeof(bmp085_ctx.ac1);
+  size_t s_bytes = (uint8_t*)&bmp085_ctx.md - (uint8_t*)&bmp085_ctx.ac1 + sizeof(bmp085_ctx.ac1);
   i2c_read_reg_to_buf(BMP085_ADDRESS, 0xAA, &bmp085_ctx.ac1, s_bytes);
   /* now fix endianness */
   int16_t *p;
