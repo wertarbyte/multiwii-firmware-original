@@ -1,6 +1,6 @@
 #if defined(LED_RING)
 
-#define LED_RING_ADDRESS 0xDA //8 bits  -- my initial :)
+#define LED_RING_ADDRESS 0x6D // DA in 8 bits  -- my initial :)
 
 void i2CLedRingState() {
   uint8_t b[10];
