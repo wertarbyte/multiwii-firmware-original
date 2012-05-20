@@ -416,6 +416,9 @@ void setup() {
   #ifdef LCD_CONF_DEBUG
     configurationLoop();
   #endif
+  #ifdef LANDING_LIGHTS_DDR
+    init_landing_lights();
+  #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
   #if defined(DATENSCHLAG_CHANNEL)
   datenschlag_reset();
@@ -712,6 +715,9 @@ void loop () {
       case 4:
         #if SONAR
           Sonar_update();debug3 = sonarAlt;
+        #endif
+        #ifdef LANDING_LIGHTS_DDR
+          auto_switch_landing_lights();
         #endif
         break;
     }
