@@ -214,7 +214,7 @@ endif
 #
 
 # Sketch source files
-SKETCHPDESRCS		:=	$(wildcard $(SRCROOT)/*.pde)
+SKETCHPDESRCS		:=	$(wildcard $(SRCROOT)/*.pde) $(wildcard $(SRCROOT)/*.ino)
 SKETCHSRCS		:=	$(wildcard $(addprefix $(SRCROOT)/,$(SRCSUFFIXES)))
 SKETCHPDE		:=	$(wildcard $(SRCROOT)/$(SKETCH).ino)
 SKETCHCPP		:=	$(BUILDROOT)/$(SKETCH).cpp
