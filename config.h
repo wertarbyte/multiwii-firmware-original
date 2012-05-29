@@ -201,6 +201,10 @@
     #define CAM_TIME_HIGH 1000   // the duration of HIGH state servo expressed in ms
     #define CAM_TIME_LOW 1000    // the duration of LOW state servo expressed in ms
 
+    /* I²C camera trigger (i2cam) */
+    //#define CAMTRIG_I2CAM
+    //#define I2CAM_INTERVAL ((uint16_t)1000)
+
   /***********************          Flying Wing                   ***********************/
     /* you can change change servo orientation and servo min/max values here */
     /* valid for all flight modes, even passThrough mode */
