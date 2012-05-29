@@ -366,6 +366,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       }
     #endif
   #endif
+
 }
 
 void setup() {
@@ -655,6 +656,17 @@ void loop () {
     
     #ifdef FIXEDWING 
       headFreeMode = 0;
+    #endif
+    #ifdef CAMTRIG_I2CAM
+      #define I2CAM_ADDRESS 0x4C
+      #ifndef I2CAM_INTERVAL
+        #define I2CAM_INTERVAL ((uint16_t)1000)
+      #endif
+      i2c_rep_start(I2CAM_ADDRESS<<1);  // I2C write direction
+      i2c_write(rcOptions[BOXCAMTRIG]); // enable snapshots?
+      i2c_write(I2CAM_INTERVAL & 0xFF); // set interval
+      i2c_write(I2CAM_INTERVAL >> 8);
+      i2c_stop();
     #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
