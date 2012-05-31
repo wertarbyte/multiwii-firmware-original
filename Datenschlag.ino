@@ -17,6 +17,7 @@ static uint8_t ds_r_pos = 0;
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
 		uint8_t *f = (uint8_t *) &ds_buffer[ds_w_pos];
+		input ^= 1<<ds_buffer_pos%4;
 		if (ds_buffer_pos%2 == 0) {
 			f[ds_buffer_pos/2] = input&0x0F;
 		} else {
