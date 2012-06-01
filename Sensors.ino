@@ -28,8 +28,8 @@
 #endif
 
 #if !defined(ITG3200_ADDRESS) 
-  #define ITG3200_ADDRESS 0x68
-  //#define ITG3200_ADDRESS 0x69
+  #define ITG3200_ADDRESS 0X68
+  //#define ITG3200_ADDRESS 0X69
 #endif
 
 #if !defined(MPU6050_ADDRESS)
@@ -145,21 +145,19 @@ void i2c_write(uint8_t data ) {
 }
 
 uint8_t i2c_read(uint8_t ack) {
-	TWCR = (1<<TWINT) | (1<<TWEN) | (ack? (1<<TWEA) : 0);
-	waitTransmissionI2C();
-	uint8_t r = TWDR;
-	if (!ack) {
-		i2c_stop();
-	}
-	return r;
+  TWCR = (1<<TWINT) | (1<<TWEN) | (ack? (1<<TWEA) : 0);
+  waitTransmissionI2C();
+  uint8_t r = TWDR;
+  if (!ack) i2c_stop();
+  return r;
 }
 
 uint8_t i2c_readAck() {
-	return i2c_read(1);
+  return i2c_read(1);
 }
 
 uint8_t i2c_readNak(void) {
-	return i2c_read(0);
+  return i2c_read(0);
 }
 
 void waitTransmissionI2C() {
@@ -176,57 +174,56 @@ void waitTransmissionI2C() {
 }
 
 size_t i2c_read_to_buf(uint8_t add, void *buf, size_t size) {
-	i2c_rep_start(add<<1 | 1);	// I2C read direction
-	size_t bytes_read = 0;
-	uint8_t *b = (uint8_t*)buf;
-	while (size--) {
-		/* acknowledge all but the final byte */
-		*b++ = i2c_read(size > 0);
-		/* TODO catch I2C errors here and abort */
-		bytes_read++;
-	}
-	return bytes_read;
+  i2c_rep_start((add<<1) | 1);	// I2C read direction
+  size_t bytes_read = 0;
+  uint8_t *b = (uint8_t*)buf;
+  while (size--) {
+    /* acknowledge all but the final byte */
+    *b++ = i2c_read(size > 0);
+    /* TODO catch I2C errors here and abort */
+    bytes_read++;
+  }
+  return bytes_read;
 }
 
 size_t i2c_read_reg_to_buf(uint8_t add, uint8_t reg, void *buf, size_t size) {
-	i2c_rep_start(add<<1);	// I2C write direction
-	i2c_write(reg);			// register selection
-	return i2c_read_to_buf(add, buf, size);
+  i2c_rep_start(add<<1); // I2C write direction
+  i2c_write(reg);        // register selection
+  return i2c_read_to_buf(add, buf, size);
 }
 
 /* transform a series of bytes from big endian to little
- * endian and vice versa.
- */
+   endian and vice versa. */
 void swap_endianness(void *buf, size_t size) {
-	/* we swap in-place, so we only have to
-	 * place _one_ element on a temporary tray
-	 */
-	uint8_t tray;
-	uint8_t *from;
-	uint8_t *to;
-	/* keep swapping until the pointers have assed each other */
-	for (from = (uint8_t*)buf, to = &from[size-1]; from < to; from++, to--) {
-		tray = *from;
-		*from = *to;
-		*to = tray;
-	}
+  /* we swap in-place, so we only have to
+  * place _one_ element on a temporary tray
+  */
+  uint8_t tray;
+  uint8_t *from;
+  uint8_t *to;
+  /* keep swapping until the pointers have assed each other */
+  for (from = (uint8_t*)buf, to = &from[size-1]; from < to; from++, to--) {
+    tray = *from;
+    *from = *to;
+    *to = tray;
+  }
 }
 
 void i2c_getSixRawADC(uint8_t add, uint8_t reg) {
-	i2c_read_reg_to_buf(add, reg, &rawADC, 6);
+  i2c_read_reg_to_buf(add, reg, &rawADC, 6);
 }
 
 void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
-  i2c_rep_start(add<<1);  // I2C write direction
+  i2c_rep_start(add<<1); // I2C write direction
   i2c_write(reg);        // register selection
   i2c_write(val);        // value to write in register
   i2c_stop();
 }
 
 uint8_t i2c_readReg(uint8_t add, uint8_t reg) {
-	uint8_t val;
-	i2c_read_reg_to_buf(add, reg, &val, 1);
-	return val;
+  uint8_t val;
+  i2c_read_reg_to_buf(add, reg, &val, 1);
+  return val;
 }
 
 // ****************
@@ -257,7 +254,7 @@ void GYRO_Common() {
       gyroZero[axis]=0;
       if (calibratingG == 1) {
         gyroZero[axis]=g[axis]/400;
-        blinkLED(10,15,1+3*nunchuk);
+        blinkLED(10,15,1);
       }
     }
     calibratingG--;
@@ -296,15 +293,15 @@ void ACC_Common() {
       a[axis] +=accADC[axis];
       // Clear global variables for next reading
       accADC[axis]=0;
-      accZero[axis]=0;
+      conf.accZero[axis]=0;
     }
     // Calculate average, shift Z down by acc_1G and store values in EEPROM at end of calibration
     if (calibratingA == 1) {
-      accZero[ROLL]  = a[ROLL]/400;
-      accZero[PITCH] = a[PITCH]/400;
-      accZero[YAW]   = a[YAW]/400-acc_1G; // for nunchuk 200=1G
-      accTrim[ROLL]   = 0;
-      accTrim[PITCH]  = 0;
+      conf.accZero[ROLL]  = a[ROLL]/400;
+      conf.accZero[PITCH] = a[PITCH]/400;
+      conf.accZero[YAW]   = a[YAW]/400-acc_1G; // for nunchuk 200=1G
+      conf.angleTrim[ROLL]   = 0;
+      conf.angleTrim[PITCH]  = 0;
       writeParams(1); // write accZero in EEPROM
     }
     calibratingA--;
@@ -356,16 +353,16 @@ void ACC_Common() {
         writeParams(1); // write accZero in EEPROM
       }
   #endif
-  accADC[ROLL]  -=  accZero[ROLL] ;
-  accADC[PITCH] -=  accZero[PITCH];
-  accADC[YAW]   -=  accZero[YAW] ;
+  accADC[ROLL]  -=  conf.accZero[ROLL] ;
+  accADC[PITCH] -=  conf.accZero[PITCH];
+  accADC[YAW]   -=  conf.accZero[YAW] ;
 }
 
 
 // ************************************************************************************************************
 // I2C Barometer BOSCH BMP085
 // ************************************************************************************************************
-// I2C adress: 0xEE (8bit)   0x77 (7bit)
+// I2C adress: 0x77 (7bit)
 // principle:
 //  1) read the calibration register (only once at the initialization)
 //  2) read uncompensated temperature (not mandatory at every cycle)
@@ -382,23 +379,23 @@ static struct {
   // sensor registers from the BOSCH BMP085 datasheet
   int16_t  ac1, ac2, ac3;
   uint16_t ac4, ac5, ac6;
-  int16_t b1, b2, mb, mc, md;
+  int16_t  b1, b2, mb, mc, md;
   union {uint16_t val; uint8_t raw[2]; } ut; //uncompensated T
   union {uint32_t val; uint8_t raw[4]; } up; //uncompensated P
   uint8_t  state;
   uint32_t deadline;
 } bmp085_ctx;  
-#define OSS 2 //we can get more uique samples and get better precision using average
+#define OSS 2 //we can get more unique samples and get better precision using average
 
 void i2c_BMP085_readCalibration(){
   delay(10);
-  /* read calibration data in one go */
+  //read calibration data in one go
   size_t s_bytes = (uint8_t*)&bmp085_ctx.md - (uint8_t*)&bmp085_ctx.ac1 + sizeof(bmp085_ctx.ac1);
   i2c_read_reg_to_buf(BMP085_ADDRESS, 0xAA, &bmp085_ctx.ac1, s_bytes);
-  /* now fix endianness */
+  // now fix endianness
   int16_t *p;
   for (p = &bmp085_ctx.ac1; p <= &bmp085_ctx.md; p++) {
-	swap_endianness(p, sizeof(*p));
+    swap_endianness(p, sizeof(*p));
   }
 }
 
@@ -766,7 +763,7 @@ void ACC_init(){
   control = control & 0xE0;        // save bits 7,6,5
   control = control | (0x02 << 3); // Range 8G (10)
   control = control | 0x00;        // Bandwidth 25 Hz 000
-  i2c_writeReg(0x38,0x14,control);
+  i2c_writeReg(0x38,0x14,control); 
   acc_1G = 63;
 }
 
@@ -787,15 +784,15 @@ void ACC_getADC(){
 #define NUNCHACK_ADDRESS 0x52
 
 void ACC_init() {
-  i2c_writeReg(NUNCHACK_ADDRESS, 0xF0, 0x55 );
-  i2c_writeReg(NUNCHACK_ADDRESS, 0xFB, 0x00 );
+  i2c_writeReg(NUNCHACK_ADDRESS ,0xF0 ,0x55 );
+  i2c_writeReg(NUNCHACK_ADDRESS ,0xFB ,0x00 );
   delay(250);
   acc_1G = 200;
 }
 
 void ACC_getADC() {
   TWBR = ((16000000L / I2C_SPEED) - 16) / 2; // change the I2C clock rate. !! you must check if the nunchuk is ok with this freq
-  i2c_getSixRawADC(NUNCHACK_ADDRESS, 0x00);
+  i2c_getSixRawADC(NUNCHACK_ADDRESS,0x00);
 
   ACC_ORIENTATION(  ( (rawADC[3]<<2)        + ((rawADC[5]>>4)&0x2) ) ,
                   - ( (rawADC[2]<<2)        + ((rawADC[5]>>3)&0x2) ) ,
@@ -808,7 +805,7 @@ void ACC_getADC() {
 // LIS3LV02 I2C Accelerometer
 // ************************************************************************
 #if defined(LIS3LV02)
-#define LIS3A  0x1D // I2C adress: 0x3A (8bit)
+#define LIS3A  0x1D
 
 void ACC_init(){
   i2c_writeReg(LIS3A ,0x20 ,0xD7 ); // CTRL_REG1   1101 0111 Pwr on, 160Hz 
@@ -832,9 +829,9 @@ void ACC_getADC(){
 #if defined(LSM303DLx_ACC)
 void ACC_init () {
   delay(10);
-  i2c_writeReg(0x30,0x20,0x27);
-  i2c_writeReg(0x30,0x23,0x30);
-  i2c_writeReg(0x30,0x21,0x00);
+  i2c_writeReg(0x18,0x20,0x27);
+  i2c_writeReg(0x18,0x23,0x30);
+  i2c_writeReg(0x18,0x21,0x00);
 
   acc_1G = 256;
 }
@@ -876,14 +873,14 @@ void ACC_getADC() {
 #define L3G4200D_ADDRESS 0x69
 void Gyro_init() {
   delay(100);
-  i2c_writeReg(L3G4200D_ADDRESS, 0x20 ,0x8F ); // CTRL_REG1   400Hz ODR, 20hz filter, run!
+  i2c_writeReg(L3G4200D_ADDRESS ,0x20 ,0x8F ); // CTRL_REG1   400Hz ODR, 20hz filter, run!
   delay(5);
-  i2c_writeReg(L3G4200D_ADDRESS, 0x24 ,0x02 ); // CTRL_REG5   low pass filter enable
+  i2c_writeReg(L3G4200D_ADDRESS ,0x24 ,0x02 ); // CTRL_REG5   low pass filter enable
 }
 
 void Gyro_getADC () {
   TWBR = ((16000000L / 400000L) - 16) / 2; // change the I2C clock rate to 400kHz
-  i2c_getSixRawADC(L3G4200D_ADDRESS, 0x80|0x28);
+  i2c_getSixRawADC(L3G4200D_ADDRESS,0x80|0x28);
 
   GYRO_ORIENTATION( ((rawADC[1]<<8) | rawADC[0])/20  ,
                     ((rawADC[3]<<8) | rawADC[2])/20  ,
@@ -949,16 +946,16 @@ void Mag_getADC() {
   if (calibratingM == 1) {
     tCal = t;
     for(axis=0;axis<3;axis++) {
-      magZero[axis] = 0;
+      conf.magZero[axis] = 0;
       magZeroTempMin[axis] = magADC[axis];
       magZeroTempMax[axis] = magADC[axis];
     }
     calibratingM = 0;
   }
   if (magInit) { // we apply offset only once mag calibration is done
-    magADC[ROLL]  -= magZero[ROLL];
-    magADC[PITCH] -= magZero[PITCH];
-    magADC[YAW]   -= magZero[YAW];
+    magADC[ROLL]  -= conf.magZero[ROLL];
+    magADC[PITCH] -= conf.magZero[PITCH];
+    magADC[YAW]   -= conf.magZero[YAW];
   }
  
   if (tCal != 0) {
@@ -971,7 +968,7 @@ void Mag_getADC() {
     } else {
       tCal = 0;
       for(axis=0;axis<3;axis++)
-        magZero[axis] = (magZeroTempMin[axis] + magZeroTempMax[axis])/2;
+        conf.magZero[axis] = (magZeroTempMin[axis] + magZeroTempMax[axis])/2;
       writeParams(1);
     }
   }
@@ -981,7 +978,7 @@ void Mag_getADC() {
 // ************************************************************************************************************
 // I2C Compass MAG3110
 // ************************************************************************************************************
-// I2C adress: 0x1C (8bit)   0x0E (7bit)
+// I2C adress: 0x0E (7bit)
 // ************************************************************************************************************
 #if defined(MAG3110)
   #define MAG_ADDRESS 0x0E
@@ -1074,10 +1071,10 @@ void Device_Mag_getADC() {
 // ************************************************************************************************************
 // I2C Compass AK8975
 // ************************************************************************************************************
-// I2C adress: 0x18 (8bit)   0x0C (7bit)
+// I2C adress: 0x0C (7bit)
 // ************************************************************************************************************
 #if defined(AK8975)
-  #define MAG_ADDRESS 0x18
+  #define MAG_ADDRESS 0x0C
   #define MAG_DATA_REGISTER 0x03
   
   void Mag_init() {
@@ -1176,39 +1173,25 @@ void ACC_getADC () {
   #endif
 #endif
 
-#if !GYRO 
-#define WMP_ADDRESS_1 0x53
-#define WMP_ADDRESS_2 0x52
+#if defined(WMP) || defined(NUNCHUCK)
 // ************************************************************************************************************
 // I2C Wii Motion Plus + optional Nunchuk
 // ************************************************************************************************************
-// I2C adress 1: 0xA6 (8bit)    0x53 (7bit)
-// I2C adress 2: 0xA4 (8bit)    0x52 (7bit)
+// I2C adress 1: 0x53 (7bit)
+// I2C adress 2: 0x52 (7bit)
 // ************************************************************************************************************
-void WMP_init() {
+#define WMP_ADDRESS_1 0x53
+#define WMP_ADDRESS_2 0x52
+
+void Gyro_init() {
   delay(250);
   i2c_writeReg(WMP_ADDRESS_1, 0xF0, 0x55); // Initialize Extension
   delay(250);
   i2c_writeReg(WMP_ADDRESS_1, 0xFE, 0x05); // Activate Nunchuck pass-through mode
   delay(250);
-
-  // We need to set acc_1G for the Nunchuk beforehand; It's used in WMP_getRawADC() and ACC_Common()
-  // If a different accelerometer is used, it will be overwritten by its ACC_init() later.
-  acc_1G = 200;
-  acc_25deg = acc_1G * 0.423;
-  uint8_t numberAccRead = 0;
-  // Read from WMP 100 times, this should return alternating WMP and Nunchuk data
-  for(uint8_t i=0;i<100;i++) {
-    delay(4);
-    if (WMP_getRawADC() == 0) numberAccRead++; // Count number of times we read from the Nunchuk extension
-  }
-  // If we got at least 25 Nunchuck reads, we assume the Nunchuk is present
-  if (numberAccRead>25)
-    nunchuk = 1;
-  delay(10);
 }
 
-uint8_t WMP_getRawADC() {
+void Gyro_getADC() {
   uint8_t axis;
   TWBR = ((16000000L / I2C_SPEED) - 16) / 2; // change the I2C clock rate
   i2c_getSixRawADC(WMP_ADDRESS_2,0x00);
@@ -1216,7 +1199,7 @@ uint8_t WMP_getRawADC() {
   if (micros() < (neutralizeTime + NEUTRALIZE_DELAY)) {//we neutralize data in case of blocking+hard reset state
     for (axis = 0; axis < 3; axis++) {gyroADC[axis]=0;accADC[axis]=0;}
     accADC[YAW] = acc_1G;
-    return 1;
+    nunchukData = 0;
   } 
 
   // Wii Motion Plus Data
@@ -1230,16 +1213,29 @@ uint8_t WMP_getRawADC() {
     gyroADC[ROLL]  = (rawADC[3]&0x01)     ? gyroADC[ROLL]/5  : gyroADC[ROLL];  //the ratio 1/5 is not exactly the IDG600 or ISZ650 specification 
     gyroADC[PITCH] = (rawADC[4]&0x02)>>1  ? gyroADC[PITCH]/5 : gyroADC[PITCH]; //we detect here the slow of fast mode WMP gyros values (see wiibrew for more details)
     gyroADC[YAW]   = (rawADC[3]&0x02)>>1  ? gyroADC[YAW]/5   : gyroADC[YAW];   // this step must be done after zero compensation    
-    return 1;
-  } else if ( (rawADC[5]&0x03) == 0x00 ) { // Nunchuk Data
-    ACC_ORIENTATION(  ( (rawADC[3]<<2)      | ((rawADC[5]>>4)&0x02) ) ,
-                    - ( (rawADC[2]<<2)      | ((rawADC[5]>>3)&0x02) ) ,
-                      ( ((rawADC[4]>>1)<<3) | ((rawADC[5]>>5)&0x06) ) );
-    ACC_Common();
-    return 0;
-  } else
-    return 2;
+    nunchukData = 0;
+  #if defined(NUNCHUCK)
+    } else if ( (rawADC[5]&0x03) == 0x00 ) { // Nunchuk Data
+      ACC_ORIENTATION(  ( (rawADC[3]<<2)      | ((rawADC[5]>>4)&0x02) ) ,
+                      - ( (rawADC[2]<<2)      | ((rawADC[5]>>3)&0x02) ) ,
+                        ( ((rawADC[4]>>1)<<3) | ((rawADC[5]>>5)&0x06) ) );
+      ACC_Common();
+      nunchukData = 1;
+  #endif
+  }
 }
+
+#if defined(NUNCHUCK)
+  void ACC_init () {
+    // We need to set acc_1G for the Nunchuk beforehand
+    // If a different accelerometer is used, it will be overwritten by its ACC_init() later.
+    acc_1G = 200;
+  }
+  void ACC_getADC () { // it's done ine the WMP gyro part
+    Gyro_getADC();
+  }
+#endif
+
 #endif
 
 #if defined(TINY_GPS) | defined(TINY_GPS_SONAR)
@@ -1255,8 +1251,8 @@ void tinygps_query(void) {
 
     GPS_numSat = nav.gps.sats;
     GPS_fix = (nav.gps.quality > 0);
-    GPS_latitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lat);
-    GPS_longitude = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lon);
+    GPS_coord[LAT] = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LAT_NORTH ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lat);
+    GPS_coord[LON] = (nav.gps.flags & 1<<NMEA_RMC_FLAGS_LON_EAST ? 1 : -1) * GPS_coord_to_decimal(&nav.gps.lon);
     GPS_altitude = nav.gps.alt.m;
     #endif
 
@@ -1281,7 +1277,7 @@ void tinygps_query(void) {
 // sonar sensor can be added again.
 // Thus, add only 1 sonar sensor at a time, poweroff, then wire the next, power on, wait for flashing light and repeat
 #if !defined(SRF08_DEFAULT_ADDRESS) 
-  #define SRF08_DEFAULT_ADDRESS 0xE0
+  #define SRF08_DEFAULT_ADDRESS 0x70
 #endif
 
 #if !defined(SRF08_RANGE_WAIT) 
@@ -1464,7 +1460,6 @@ void initSensors() {
   i2c_init();
   delay(100);
   if (GYRO) Gyro_init();
-  else WMP_init();
   if (BARO) Baro_init();
   if (MAG) Mag_init();
   if (ACC) {ACC_init();acc_25deg = acc_1G * 0.423;}
