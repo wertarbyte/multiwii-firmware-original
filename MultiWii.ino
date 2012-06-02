@@ -488,7 +488,7 @@ void setup() {
   #endif
   /************************************/
  
-  #if defined(I2C_GPS)
+  #if defined(I2C_GPS) || defined(TINY_GPS)
    GPS_Enable = 1;
   #endif
   

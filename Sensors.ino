@@ -1444,7 +1444,14 @@ sonarAlt = srf08_ctx.range[0]; //tmp
 #elif defined(TINY_GPS_SONAR)
 inline void Sonar_init() {}
 void Sonar_update() {
-	tinygps_query();
+  /* do not query the module again if the GPS loop already did */
+  #if defined(TINY_GPS)
+    if (!GPS_Enable) {
+  #else
+    {
+  #endif
+      tinygps_query();
+    }
 }
 #else
 inline void Sonar_init() {}
