@@ -240,12 +240,18 @@ void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
       #if defined(LED_FLASHER)
         switch_led_flasher(1);
       #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(1);
+      #endif
       LEDPIN_TOGGLE; // switch LEDPIN state
       BUZZERPIN_ON;
       delay(wait);
       BUZZERPIN_OFF;
       #if defined(LED_FLASHER)
         switch_led_flasher(0);
+      #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(0);
       #endif
     }
     delay(60);
