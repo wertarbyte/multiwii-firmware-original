@@ -60,14 +60,23 @@ void led_flasher_set_sequence(uint8_t s) {
   led_flasher_sequence = s;
 }
 
-void switch_led_flasher() {
-  uint8_t seg = (currentTime/1000/125)%8;
-  if (led_flasher_sequence & 1<<seg) {
+void inline switch_led_flasher(uint8_t on) {
+  if (on) {
     LED_FLASHER_PORT |= (1<<LED_FLASHER_BIT);
   } else {
     LED_FLASHER_PORT &= ~(1<<LED_FLASHER_BIT);
   }
 }
+
+void auto_switch_led_flasher() {
+  uint8_t seg = (currentTime/1000/125)%8;
+  if (led_flasher_sequence & 1<<seg) {
+    switch_led_flasher(1);
+  } else {
+    switch_led_flasher(0);
+  }
+}
+#endif
 
 #if defined(LANDING_LIGHTS_DDR)
 void init_landing_lights(void) {
@@ -91,6 +100,5 @@ void auto_switch_landing_lights(void) {
 	}
 	#endif
 }
-#endif
 
 #endif
