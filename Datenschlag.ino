@@ -1,8 +1,15 @@
+#include <stddef.h>
 
-#define DS_FRAME_PAYLOAD_SIZE 5
+/* each command has a fixed amount of payload associated with it.
+ * The number of payload bytes is encoded in the highest 3 bits of
+ * the command byte (although capped at DS_FRAME_MAX_PAYLOAD_SIZE)
+ */
+#define DS_CMD_PAYLOAD_SIZE(x) ( (x & 0xFF) >> 5 )
+
+#define DS_FRAME_MAX_PAYLOAD_SIZE 5
 struct ds_frame_t {
 	uint8_t cmd; /* command type */
-	uint8_t data[DS_FRAME_PAYLOAD_SIZE]; /* payload */
+	uint8_t data[DS_FRAME_MAX_PAYLOAD_SIZE]; /* payload */
 	uint8_t chk; /* checksum (XOR all other fields) */
 };
 
@@ -16,12 +23,24 @@ static uint8_t ds_r_pos = 0;
 
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
-		uint8_t *f = (uint8_t *) &ds_buffer[ds_w_pos];
+		struct ds_frame_t *f = &ds_buffer[ds_w_pos];
+		uint8_t *b = (uint8_t *) f;
+		/* did we just enter a new frame? wipe the struct */
+		if (ds_buffer_pos == 0) {
+			memset(f, 0, sizeof(*f));
+		} else if (ds_buffer_pos >= 2*(offsetof(struct ds_frame_t, cmd)+sizeof(f->cmd))) {
+			/* so we have the command type and know how big the payload should be;
+			 * if we alredy have enough nibbles/bytes, advance to the checksum
+			 */
+			if (2*(offsetof(struct ds_frame_t, data)+DS_CMD_PAYLOAD_SIZE(f->cmd)) == ds_buffer_pos) {
+				ds_buffer_pos = 2*(offsetof(struct ds_frame_t, chk));
+			}
+		}
 		input ^= 1<<ds_buffer_pos%4;
 		if (ds_buffer_pos%2 == 0) {
-			f[ds_buffer_pos/2] = input&0x0F;
+			b[ds_buffer_pos/2] = input&0x0F;
 		} else {
-			f[ds_buffer_pos/2] |= input<<4;
+			b[ds_buffer_pos/2] |= input<<4;
 		}
 		ds_buffer_pos++;
 		/* finished a complete frame? */
@@ -106,9 +125,16 @@ static struct {
 } datenschlag_aux = {0,0,0};
 
 void datenschlag_process_aux(struct ds_frame_t *f) {
+/*
 	datenschlag_aux.mask   = f->data[0];
 	datenschlag_aux.active = f->data[1];
 	datenschlag_aux.up     = f->data[2];
+*/
+	uint8_t a = f->data[0] & 0x0F;
+	uint8_t b = (f->data[0] & 0xF0)>>4;
+	datenschlag_aux.mask   = (a | b);
+	datenschlag_aux.active = (    b);
+	datenschlag_aux.up     = (a & b);
 }
 
 void datenschlag_apply_aux(void) {
@@ -182,7 +208,7 @@ void datenschlag_process() {
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
-			case 0xFA:
+			case (4<<5 | 0x0A): // 0x8A
 				/* flight assistance data has 4 payload bytes:
 				 * mask data (which systems do we wish to control?)
 				 * mask data mask [sic] (which mask bits do we want to change?)
@@ -193,17 +219,18 @@ void datenschlag_process() {
 				datenschlag_fa_settings.values = (datenschlag_fa_settings.values & ~frame.data[3]) | (frame.data[2] & frame.data[3]);
 				break;
 #if defined(LED_FLASHER)
-			case 0x1E:
+			case (1<<5 | 0x0F): // 0x2F
+				/* set LED flash sequence, 1 byte payload */
 				led_flasher_set_sequence(frame.data[0]);
 				break;
 #endif
-			case 0xDE:
-				/* debugging data */
+			case (2<<5 | 0x0D): // 0x4D
+				/* debugging data, 2 bytes payload */
 				debug1 = frame.data[0];
 				debug2 = frame.data[1];
 				break;
-			case 0xAC:
-				/* AUX channel switches */
+			case (1<<5 | 0x0A): // 0x2A
+				/* AUX channel switches, 1 byte payload */
 				datenschlag_process_aux(&frame);
 			default:
 				break;
