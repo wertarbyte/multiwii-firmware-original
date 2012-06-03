@@ -503,7 +503,7 @@ int32_t GPS_coord_to_decimal(struct coord *c) {
 	for (i=0; i<NMEA_MINUTE_FRACTS; i++) {
 		uint8_t b = c->frac[i/2];
 		uint8_t n = (i%2 ? b&0x0F : b>>4);
-		res += n*(100000L/(i+1));
+		res += n*(100000L/(10*(i+1)));
 	}
 	/* now scale it back to [degrees * 100000] */
 	return res/60;
