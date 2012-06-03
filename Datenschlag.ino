@@ -1,3 +1,5 @@
+#if defined(DATENSCHLAG_CHANNEL)
+
 #include <stddef.h>
 
 /* each command has a fixed amount of payload associated with it.
@@ -237,3 +239,5 @@ void datenschlag_process() {
 		}
 	}
 }
+
+#endif
