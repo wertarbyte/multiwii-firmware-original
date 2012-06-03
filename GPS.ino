@@ -494,19 +494,21 @@ void GPS_set_pids() {
 
 #if defined (TINY_GPS)
 int32_t GPS_coord_to_decimal(struct coord *c) {
-	uint32_t res = 0;
-	/* at first, calculate everything in [minutes * 100000] */
-	res += (uint32_t)c->deg * 60 * 100000L;
-	res += (uint32_t)c->min      * 100000L;
+	#define GPS_SCALE_FACTOR 10000000L
+	uint32_t deg = 0;
+	deg = (uint32_t)c->deg * GPS_SCALE_FACTOR;
+
+	uint32_t min = 0;
+	min = (uint32_t)c->min * GPS_SCALE_FACTOR;
 	/* add up the BCD fractions */
-	uint8_t i;
-	for (i=0; i<NMEA_MINUTE_FRACTS; i++) {
+	for (uint8_t i=0; i<NMEA_MINUTE_FRACTS; i++) {
 		uint8_t b = c->frac[i/2];
 		uint8_t n = (i%2 ? b&0x0F : b>>4);
-		res += n*(100000L/(10*(i+1)));
+		min += n*(GPS_SCALE_FACTOR/(10*(i+1)));
 	}
-	/* now scale it back to [degrees * 100000] */
-	return res/60;
+
+	/* now sum up degrees and minutes */
+	return deg + min/60;
 }
 #endif
 
