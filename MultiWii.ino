@@ -46,8 +46,10 @@ March  2012     V2.0
 #define BOXLEDMAX    11
 /* enable landing lights at any altitude */
 #define BOXLLIGHTS   12
+/* acquire heading for HEADFREE mode */
+#define BOXHEADADJ   13
 
-#define CHECKBOXITEMS 13
+#define CHECKBOXITEMS 14
 #define PIDITEMS 10
 
 static uint32_t currentTime = 0;
@@ -762,6 +764,10 @@ void loop () {
           headFreeMode = 1;
         }
       } else headFreeMode = 0;
+      if (rcOptions[BOXHEADADJ]) {
+        /* acquire new heading */
+        headFreeModeHold = heading;
+      }
     #endif
     
     #if GPS
