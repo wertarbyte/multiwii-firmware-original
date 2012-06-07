@@ -24,10 +24,12 @@ March  2012     V2.0
 #define AUX4       7
 
 #define PIDALT     3
-#define PIDVEL     4
-#define PIDGPS     5
-#define PIDLEVEL   6
-#define PIDMAG     7
+#define PIDPOS     4
+#define PIDPOSR    5
+#define PIDNAVR    6
+#define PIDLEVEL   7
+#define PIDMAG     8
+#define PIDVEL     9 // not used currently
 
 #define BOXACC       0
 #define BOXBARO      1
@@ -40,9 +42,13 @@ March  2012     V2.0
 #define BOXPASSTHRU  8
 #define BOXHEADFREE  9
 #define BOXBEEPERON  10
+/* we want maximum illumination */
+#define BOXLEDMAX    11
+/* enable landing lights at any altitude */
+#define BOXLLIGHTS   12
 
-#define CHECKBOXITEMS 11
-#define PIDITEMS 8
+#define CHECKBOXITEMS 13
+#define PIDITEMS 10
 
 static uint32_t currentTime = 0;
 static uint16_t previousTime = 0;
@@ -53,7 +59,7 @@ static uint16_t calibratingG;
 static uint8_t  armed = 0;
 static uint16_t acc_1G;             // this is the 1G measured acceleration
 static int16_t  acc_25deg;
-static uint8_t  nunchuk = 0;
+static uint8_t  nunchukData = 0;    // if a nunchuck data is read
 static uint8_t  accMode = 0;        // if level mode is a activated
 static uint8_t  magMode = 0;        // if compass heading hold is a activated
 static uint8_t  baroMode = 0;       // if altitude hold is activated
@@ -76,6 +82,7 @@ static int16_t  errorAltitudeI = 0;
 static uint8_t  toggleBeep = 0;
 static int16_t  debug1,debug2,debug3,debug4;
 static int16_t  sonarAlt; //to think about the unit
+static uint8_t  i2c_init_done = 0;          // For i2c gps we have to now when i2c init is done, so we can update parameters to the i2cgps from eeprom (at startup it is done in setup())
 
 //for log
 static uint16_t cycleTimeMax = 0;       // highest ever cycle timen
@@ -169,36 +176,87 @@ static struct {
   #ifdef TRI
     uint16_t tri_yaw_middle;
   #endif
-  #ifdef HELICOPTER
+  #if defined HELICOPTER || defined(AIRPLANE)
     int16_t servoTrim[8];
+  #endif
+  #if defined(GYRO_SMOOTHING)
+    uint8_t Smoothing[3];
   #endif
 } conf;
 
+
 // **********************
-// GPS
+// GPS common variables
 // **********************
-static int32_t  GPS_latitude,GPS_longitude;
-static int32_t  GPS_latitude_home,GPS_longitude_home,GPS_altitude_home;
-static int32_t  GPS_latitude_hold,GPS_longitude_hold,GPS_altitude_hold;
+static int32_t  GPS_coord[2];
+static int32_t  GPS_home[2];
+static int32_t  GPS_hold[2];
 static uint8_t  GPS_fix , GPS_fix_home = 0;
 static uint8_t  GPS_numSat;
 static uint16_t GPS_distanceToHome,GPS_distanceToHold;       // distance to home or hold point in meters
 static int16_t  GPS_directionToHome,GPS_directionToHold;     // direction to home or hol point in degrees
-static int16_t  GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s
+static uint16_t GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s
 static uint8_t  GPS_update = 0;                              // it's a binary toogle to distinct a GPS position update
 static int16_t  GPS_angle[2] = { 0, 0};                      // it's the angles that must be applied for GPS correction
+static uint16_t GPS_ground_course = 0;                       // degrees*10
+static uint8_t  GPS_Present = 0;                             // Checksum from Gps serial
+static uint8_t  GPS_Enable  = 0;
 
-static uint16_t GPS_ground_course = 0;                       //degrees*10
+#define LAT  0
+#define LON  1
+// The desired bank towards North (Positive) or South (Negative) : latitude
+// The desired bank towards East (Positive) or West (Negative)   : longitude
+static int16_t	nav[2];
+
+//////////////////////////////////////////////////////////////////////////////
+// POSHOLD control gains
+//
+#define POSHOLD_P              .11
+#define POSHOLD_I              0.0
+#define POSHOLD_IMAX           20		// degrees
+
+#define POSHOLD_RATE_P         2.0			//
+#define POSHOLD_RATE_I         0.08			// Wind control
+#define POSHOLD_RATE_D         0.045			// try 2 or 3 for POSHOLD_RATE 1
+#define POSHOLD_RATE_IMAX      20			// degrees
+//////////////////////////////////////////////////////////////////////////////
+// Navigation PID gains
+//
+#define NAV_P                  1.4		//
+#define NAV_I                  0.20		// Wind control
+#define NAV_D                  0.08		//
+#define NAV_IMAX               20		// degrees
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serial GPS only variables
+//navigation mode
+#define NAV_MODE_NONE          0
+#define NAV_MODE_POSHOLD       1
+#define NAV_MODE_WP            2
+static int8_t  nav_mode = NAV_MODE_NONE;            //Navigation mode
+
 
 
 void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
   uint8_t i,r;
   for (r=0;r<repeat;r++) {
     for(i=0;i<num;i++) {
+      #if defined(LED_FLASHER)
+        switch_led_flasher(1);
+      #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(1);
+      #endif
       LEDPIN_TOGGLE; // switch LEDPIN state
       BUZZERPIN_ON;
       delay(wait);
       BUZZERPIN_OFF;
+      #if defined(LED_FLASHER)
+        switch_led_flasher(0);
+      #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(0);
+      #endif
     }
     delay(60);
   }
@@ -299,7 +357,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   #endif
   buzzer(buzzerFreq); // external buzzer routine that handles buzzer events globally now
   
-  if ( (calibratingA>0 && (ACC || nunchuk) ) || (calibratingG>0) ) { // Calibration phasis
+  if ( (calibratingA>0 && ACC ) || (calibratingG>0) ) { // Calibration phasis
     LEDPIN_TOGGLE;
   } else {
     if (calibratedACC == 1) {LEDPIN_OFF;}
@@ -315,7 +373,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   #endif
 
   #if defined(LED_FLASHER)
-    switch_led_flasher();
+    auto_switch_led_flasher();
   #endif
 
   if ( currentTime > calibratedAccTime ) {
@@ -327,7 +385,11 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       calibratedACC = 1;
   }
 
-  serialCom();
+    #if defined(GPS_PROMINI)
+      if(GPS_Enable == 0){serialCom();}
+    #else
+      serialCom();
+    #endif
 
   #if defined(POWERMETER)
     intPowerMeterSum = (pMeter[PMOTOR_SUM]/PLEVELDIV);
@@ -355,7 +417,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   
   #if GPS
     static uint32_t GPSLEDTime;
-    if ( currentTime > GPSLEDTime && (GPS_fix_home == 1)) {
+    if ( currentTime > GPSLEDTime && (GPS_numSat >= 5)) {
       GPSLEDTime = currentTime + 150000;
       LEDPIN_TOGGLE;
     }
@@ -379,7 +441,9 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
 }
 
 void setup() {
-  SerialOpen(0,SERIAL_COM_SPEED);
+  #if !defined(GPS_PROMINI)
+    SerialOpen(0,SERIAL_COM_SPEED);
+  #endif
   LEDPIN_PINMODE;
   POWERPIN_PINMODE;
   BUZZERPIN_PINMODE;
@@ -405,6 +469,9 @@ void setup() {
     initOpenLRS();
   #endif
   initSensors();
+  #if defined(I2C_GPS) || defined(GPS_SERIAL)
+    GPS_set_pids();
+  #endif
   previousTime = micros();
   #if defined(GIMBAL)
    calibratingA = 400;
@@ -414,9 +481,32 @@ void setup() {
     for(uint8_t i=0;i<=PMOTOR_SUM;i++)
       pMeter[i]=0;
   #endif
+  /************************************/
   #if defined(GPS_SERIAL)
-    SerialOpen(GPS_SERIAL,GPS_BAUD);
+    SerialOpen(GPS_SERIAL,GPS_BAUD);  
+    delay(400);  
+    for(uint8_t i=0;i<=5;i++){
+      GPS_NewData(); 
+      LEDPIN_ON
+      delay(20);
+      LEDPIN_OFF
+      delay(80);
+    }
+    if(!GPS_Present){
+      SerialEnd(GPS_SERIAL);
+      SerialOpen(0,SERIAL_COM_SPEED);
+    }      
+    #if !defined(GPS_PROMINI)
+      GPS_Present = 1;
+    #endif
+    GPS_Enable = GPS_Present;    
   #endif
+  /************************************/
+ 
+  #if defined(I2C_GPS) || defined(TINY_GPS)
+   GPS_Enable = 1;
+  #endif
+  
   #if defined(LCD_ETPP) || defined(LCD_LCD03) || defined(OLED_I2C_128x64)
     initLCD();
   #endif
@@ -425,6 +515,9 @@ void setup() {
   #endif
   #ifdef LCD_CONF_DEBUG
     configurationLoop();
+  #endif
+  #ifdef LANDING_LIGHTS_DDR
+    init_landing_lights();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
   #if defined(DATENSCHLAG_CHANNEL)
@@ -475,7 +568,7 @@ void loop () {
     #if defined(FAILSAFE)
       if ( failsafeCnt > (5*FAILSAVE_DELAY) && armed==1) {                  // Stabilize, and set Throttle to specified level
         for(i=0; i<3; i++) rcData[i] = MIDRC;                               // after specified guard time after RC signal is lost (in 0.1sec)
-        rcData[THROTTLE] = FAILSAVE_THR0TTLE;
+        rcData[THROTTLE] = FAILSAVE_THROTTLE;
         if (failsafeCnt > 5*(FAILSAVE_DELAY+FAILSAVE_OFF_DELAY)) {          // Turn OFF motors after specified Time (in 0.1sec)
           armed = 0;   // This will prevent the copter to automatically rearm if failsafe shuts it down and prevents
           okToArm = 0; // to restart accidentely by just reconnect to the tx - you will have to switch off first to rearm
@@ -601,6 +694,9 @@ void loop () {
         rcDelayCommand = 0;
       }
     }
+    #if defined(LED_FLASHER)
+      led_flasher_autoselect_sequence();
+    #endif
     
     #if defined(INFLIGHT_ACC_CALIBRATION)
       if (AccInflightCalibrationArmed && armed == 1 && rcData[THROTTLE] > MINCHECK && !rcOptions[BOXARM] ){ // Copter is airborne and you are turning it off via boxarm : start measurement
@@ -631,7 +727,7 @@ void loop () {
     #endif
 
     // note: if FAILSAFE is disable, failsafeCnt > 5*FAILSAVE_DELAY is always false
-    if (( rcOptions[BOXACC] || (failsafeCnt > 5*FAILSAVE_DELAY) ) && (ACC || nunchuk)) { 
+    if (( rcOptions[BOXACC] || (failsafeCnt > 5*FAILSAVE_DELAY) ) && ACC ) { 
       // bumpless transfer to Level mode
       if (!accMode) {
         errorAngleI[ROLL] = 0; errorAngleI[PITCH] = 0;
@@ -666,19 +762,64 @@ void loop () {
         }
       } else headFreeMode = 0;
     #endif
+    
     #if GPS
-      if (rcOptions[BOXGPSHOME]) {GPSModeHome = 1;}
-      else GPSModeHome = 0;
-      if (rcOptions[BOXGPSHOLD]) {
-        if (GPSModeHold == 0) {
-          GPSModeHold = 1;
-          GPS_latitude_hold = GPS_latitude;
-          GPS_longitude_hold = GPS_longitude;
+      #if defined(I2C_GPS)
+      static uint8_t GPSNavReset = 1;
+      if (GPS_fix == 1 && GPS_numSat >= 5 ) {
+        if (!rcOptions[BOXGPSHOME] && !rcOptions[BOXGPSHOLD] )
+          {    //Both boxes are unselected
+            if (GPSNavReset == 0 ) { 
+               GPSNavReset = 1; 
+               GPS_I2C_command(I2C_GPS_COMMAND_STOP_NAV,0);
+            }
+          }  
+        if (rcOptions[BOXGPSHOME]) {
+         if (GPSModeHome == 0)  {
+            GPSModeHome = 1;
+            GPSNavReset = 0;
+            GPS_I2C_command(I2C_GPS_COMMAND_START_NAV,0);        //waypoint zero
+          }
+        } else {
+          GPSModeHome = 0;
         }
-      } else {
-        GPSModeHold = 0;
+        if (rcOptions[BOXGPSHOLD]) {
+          if (GPSModeHold == 0 & GPSModeHome == 0) {
+            GPSModeHold = 1;
+            GPSNavReset = 0;
+            GPS_I2C_command(I2C_GPS_COMMAND_POSHOLD,0);
+          }
+        } else {
+          GPSModeHold = 0;
+        }
       }
+      #endif 
+      #if defined(GPS_SERIAL)
+      if (GPS_fix == 1 && GPS_numSat >= 5 ) {
+        if (rcOptions[BOXGPSHOME]) {
+          if (GPSModeHome == 0)  {
+            GPSModeHome = 1;
+            GPS_set_next_wp(&GPS_home[LAT],&GPS_home[LON]);
+            nav_mode    = NAV_MODE_WP;
+          }
+        } else {
+          GPSModeHome = 0;
+        }
+        if (rcOptions[BOXGPSHOLD]) {
+          if (GPSModeHold == 0) {
+            GPSModeHold = 1;
+            GPS_hold[LAT] = GPS_coord[LAT];
+            GPS_hold[LON] = GPS_coord[LON];
+            GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
+            nav_mode = NAV_MODE_POSHOLD;
+          }
+        } else {
+          GPSModeHold = 0;
+        }
+      }
+      #endif
     #endif
+   
     if (rcOptions[BOXPASSTHRU]) {passThruMode = 1;}
     else {passThruMode = 0;}
     
@@ -709,12 +850,15 @@ void loop () {
         break;
       case 3:
         #if GPS
-          GPS_NewData();
+          if(GPS_Enable) GPS_NewData();
         #endif
         break;
       case 4:
         #if SONAR
           Sonar_update();debug3 = sonarAlt;
+        #endif
+        #ifdef LANDING_LIGHTS_DDR
+          auto_switch_landing_lights();
         #endif
         break;
     }
@@ -738,7 +882,7 @@ void loop () {
   #if BARO
     if (baroMode) {
       if (abs(rcCommand[THROTTLE]-initialThrottleHold)>20) {
-         baroMode = 0; // so that a new althold reference is defined
+        baroMode = 0; // so that a new althold reference is defined
       }
       rcCommand[THROTTLE] = initialThrottleHold + BaroPID;
     }
@@ -746,30 +890,26 @@ void loop () {
   #if GPS
     uint16_t GPS_dist;
     int16_t  GPS_dir;
-
+    //debug2 = GPS_angle[ROLL];
+    //debug3 = GPS_angle[PITCH];
+    // Check that we really need to navigate ?
     if ( (GPSModeHome == 0 && GPSModeHold == 0) || (GPS_fix_home == 0) ) {
-      GPS_angle[ROLL]  = 0;
-      GPS_angle[PITCH] = 0;
+      // If not. Reset nav loops and all nav related parameters
+      GPS_reset_nav();
     } else {
-      if (GPSModeHome == 1) {
-        GPS_dist = GPS_distanceToHome;
-        GPS_dir = GPS_directionToHome;
-      }
-      if (GPSModeHold == 1) {
-        GPS_dist = GPS_distanceToHold;
-        GPS_dir = GPS_directionToHold;
-      }
-      float radDiff = (GPS_dir-heading) * 0.0174533f;
-      GPS_angle[ROLL]  = constrain(conf.P8[PIDGPS] * sin(radDiff) * GPS_dist / 10,-conf.D8[PIDGPS]*10,+conf.D8[PIDGPS]*10); // with P=5.0, a distance of 1 meter = 0.5deg inclination
-      GPS_angle[PITCH] = constrain(conf.P8[PIDGPS] * cos(radDiff) * GPS_dist / 10,-conf.D8[PIDGPS]*10,+conf.D8[PIDGPS]*10); // max inclination = D deg
+      float sin_yaw_y = sin(heading*0.0174532925f);
+      float cos_yaw_x = cos(heading*0.0174532925f);
+      GPS_angle[ROLL]   = (nav[LON]*cos_yaw_x - nav[LAT]*sin_yaw_y) /10;
+      GPS_angle[PITCH]  = (nav[LON]*sin_yaw_y + nav[LAT]*cos_yaw_x) /10;
     }
   #endif
+
 
   //**** PITCH & ROLL & YAW PID ****    
   for(axis=0;axis<3;axis++) {
     if (accMode == 1 && axis<2 ) { //LEVEL MODE
       // 50 degrees max inclination
-      errorAngle = constrain(2*rcCommand[axis] - GPS_angle[axis],-500,+500) - angle[axis] + conf.angleTrim[axis]; //16 bits is ok here
+      errorAngle = constrain(2*rcCommand[axis] + GPS_angle[axis],-500,+500) - angle[axis] + conf.angleTrim[axis]; //16 bits is ok here
       #ifdef LEVEL_PDF
         PTerm      = -(int32_t)angle[axis]*conf.P8[PIDLEVEL]/100 ;
       #else  

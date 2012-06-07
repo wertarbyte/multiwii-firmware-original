@@ -14,7 +14,7 @@ char digit1(uint16_t v) {return '0' + v - (v/10) * 10;}
 // ########################################
 // #  i2c OLED display funtion primitives #
 // ########################################
-#define OLED_address   0x78     // OLED at address 0x3C in 7bit, 0x78 in 8bit form 
+#define OLED_address   0x3C     // OLED at address 0x3C in 7bit
 char LINE_FILL_STRING[] = "                      "; // Used by clear_OLED() 128 bits / 6 bytes = 21 chars per row  
 unsigned char CHAR_FORMAT = 0;      // use to INVERSE characters
 // use INVERSE    CHAR_FORMAT = 0b01111111;
@@ -322,11 +322,13 @@ void i2c_clear_OLED(void){
 #endif // OLED_I2C_128x64
 
 #if defined(LCD_ETPP)
+#define LCD_ETPP_ADDRESS 0x3B
+
 // *********************
 // i2c Eagle Tree Power Panel primitives
 // *********************
 void i2c_ETPP_init () {
-  i2c_rep_start(0x76+0); // LCD_ETPP i2c address: 0x3B in 7 bit form. Shift left one bit and concatenate i2c write command bit of zero = 0x76 in 8 bit form.
+  i2c_rep_start(LCD_ETPP_ADDRESS<<1); // LCD_ETPP i2c address: 0x3B in 7 bit form. Shift left one bit and concatenate i2c write command bit of zero
   i2c_write(0x00);// LCD_ETPP command register
   i2c_write(0x24);// Function Set 001D0MSL D : data length for parallel interface only; M: 0 = 1x32 , 1 = 2x16; S: 0 = 1:18 multiplex drive mode, 1x32 or 2x16 character display, 1 = 1:9 multiplex drive mode, 1x16 character display; H: 0 = basic instruction set plus standard instruction set, 1 = basic instruction set plus extended instruction set
   i2c_write(0x0C);// Display on   00001DCB D : 0 = Display Off, 1 = Display On; C : 0 = Underline Cursor Off, 1 = Underline Cursor On; B : 0 = Blinking Cursor Off, 1 = Blinking Cursor On
@@ -334,13 +336,13 @@ void i2c_ETPP_init () {
   LCDclear();
 }
 void i2c_ETPP_send_cmd (byte c) {
-  i2c_rep_start(0x76+0); // I2C write direction
+  i2c_rep_start(LCD_ETPP_ADDRESS<<1); // I2C write direction
   i2c_write(0x00);// LCD_ETPP command register
   i2c_write(c);
 }
 void i2c_ETPP_send_char (char c) {
   if (c > 0x0f) c |= 0x80; // LCD_ETPP uses character set "R", which has A->z mapped same as ascii + high bit; don't mess with custom chars.
-  i2c_rep_start(0x76+0);// I2C write direction
+  i2c_rep_start(LCD_ETPP_ADDRESS<<1);// I2C write direction
   i2c_write(0x40);// LCD_ETPP data register
   i2c_write(c);
 }
@@ -357,7 +359,7 @@ void i2c_ETPP_set_cursor (byte col, byte row) {
 void i2c_ETPP_create_char (byte idx, uint8_t* array) {
   i2c_ETPP_send_cmd(0x80); // CGRAM and DDRAM share an address register, but you can't set certain bits with the CGRAM address command.   Use DDRAM address command to be sure high order address bits are zero.
   i2c_ETPP_send_cmd(0x40 | byte(idx * 8));// Set CGRAM address
-  i2c_rep_start(0x76+0);// I2C write direction
+  i2c_rep_start(LCD_ETPP_ADDRESS<<1);// I2C write direction
   i2c_write(0x40);// LCD_ETPP data register
   for (byte i = 0; i<8; i++) {i2c_write(*array); array++;}
 }
@@ -398,23 +400,24 @@ void ETPP_barGraph(byte num, int val) { // num chars in graph; percent as 1 to 1
 #endif //LCD_ETPP
 
 #if defined(LCD_LCD03) // LCD_LCD03
+#define LCD_LCD03_ADDRESS 0x63
 // *********************
 // I2C LCD03 primitives
 // *********************
 void i2c_LCD03_init () {
-  i2c_rep_start(0xC6); // The LCD03 is located on the I2C bus at address 0xC6
+  i2c_rep_start(LCD_LCD03_ADDRESS<<1); // The LCD03 is located on the I2C bus at address 0xC6
   i2c_write(0x00);// Command register
   i2c_write(04);// Hide cursor
   i2c_write(12);// Clear screen
   i2c_write(19);// Backlight on
 }
 void i2c_LCD03_send_cmd (byte c) {
-  i2c_rep_start(0xC6);
+  i2c_rep_start(LCD_LCD03_ADDRESS<<1);
   i2c_write(0x00);
   i2c_write(c);
 }
 void i2c_LCD03_send_char (char c) {
-  i2c_rep_start(0xC6);
+  i2c_rep_start(LCD_LCD03_ADDRESS<<1);
   i2c_write(0x00);
   i2c_write(c);
 }
@@ -573,6 +576,42 @@ void initLCD() {
   line1[13] = digit1(VERSION);
   LCDattributesBold();
   LCDsetLine(1); LCDprintChar(line1);
+  strcpy_P(line2,PSTR("  Unknown Modell"));
+  #if defined(TRI)
+    strcpy_P(line2,PSTR("  TRICopter"));
+  #elif defined(QUADP)
+    strcpy_P(line2,PSTR("  QUAD-P"));
+  #elif defined(QUADX)
+    strcpy_P(line2,PSTR("  QUAD-X"));
+  #elif defined(BI)
+    strcpy_P(line2,PSTR("  BICopter"));
+  #elif defined(Y6)
+    strcpy_P(line2,PSTR("  Y6"));
+  #elif defined(HEX6)
+    strcpy_P(line2,PSTR("  HEX6"));
+  #elif defined(FLYING_WING)
+    strcpy_P(line2,PSTR("  FLYING_WING"));
+  #elif defined(Y4)
+    strcpy_P(line2,PSTR("  Y4"));
+  #elif defined(HEX6X)
+    strcpy_P(line2,PSTR("  HEX6-X"));
+  #elif defined(OCTOX8)
+    strcpy_P(line2,PSTR("  OCTOX8"));
+  #elif defined(OCTOFLATP)
+    strcpy_P(line2,PSTR("  OCTOFLAT-P"));
+  #elif defined(OCTOFLATX)
+    strcpy_P(line2,PSTR("  OCTOFLAT-X"));
+  #elif defined (AIRPLANE)
+    strcpy_P(line2,PSTR("  AIRPLANE"));
+  #elif defined (HELI_120_CCPM) 
+    strcpy_P(line2,PSTR("  HELI_120_CCPM")); 
+  #elif defined (HELI_90_DEG) 
+    strcpy_P(line2,PSTR("  HELI_90_DEG"));
+  #elif defined(VTAIL4)   
+    strcpy_P(line2,PSTR("  VTAIL Quad"));
+  #endif
+  //LCDattributesBold();
+  LCDsetLine(2); LCDprintChar(line2);
   LCDattributesOff();
 #if defined(LCD_TEXTSTAR) || defined(LCD_VT100)
   delay(2500);
@@ -732,7 +771,19 @@ PROGMEM prog_char lcd_param_text74 [] = "Trim Ser L";
 PROGMEM prog_char lcd_param_text75 [] = "Trim Ser T";
 PROGMEM prog_char lcd_param_text76 [] = "Trim Ser R";
 #endif
-//                                        0123456789.12345
+#ifdef GYRO_SMOOTHING //                 0123456789
+PROGMEM prog_char lcd_param_text80 [] = "Gsmooth R ";
+PROGMEM prog_char lcd_param_text81 [] = "Gsmooth P ";
+PROGMEM prog_char lcd_param_text82 [] = "Gsmooth Y ";
+#endif
+#ifdef AIRPLANE //                       0123456789
+PROGMEM prog_char lcd_param_text83 [] = "ServoMid 3";
+PROGMEM prog_char lcd_param_text84 [] = "ServoMid 4";
+PROGMEM prog_char lcd_param_text85 [] = "ServoMid 5";
+PROGMEM prog_char lcd_param_text86 [] = "ServoMid 6";
+PROGMEM prog_char lcd_param_text87 [] = "ServoMid 7";
+#endif
+//                                       0123456789.12345
 
 PROGMEM const prog_void *lcd_param_ptr_table [] = {
   &lcd_param_text01, &conf.P8[ROLL], &__P,
@@ -877,7 +928,7 @@ PROGMEM const prog_void *lcd_param_ptr_table [] = {
 #endif
 #ifdef POWERMETER
   &lcd_param_text33, &pMeter[PMOTOR_SUM], &__PS,
-  &lcd_param_text34, &powerTrigger1, &__PT,
+  &lcd_param_text34, &conf.powerTrigger1, &__PT,
 #endif
 #ifdef VBAT
   &lcd_param_text35, &vbat, &__VB,
@@ -894,6 +945,17 @@ PROGMEM const prog_void *lcd_param_ptr_table [] = {
   &lcd_param_text74, &conf.servoTrim[4], &__ST,
   &lcd_param_text75, &conf.servoTrim[5], &__ST,
   &lcd_param_text76, &conf.servoTrim[6], &__ST,
+#endif
+#ifdef GYRO_SMOOTHING
+  &lcd_param_text80, &conf.Smoothing[0], &__D,
+  &lcd_param_text81, &conf.Smoothing[1], &__D,
+  &lcd_param_text82, &conf.Smoothing[2], &__D,
+#endif
+#ifdef AIRPLANE
+  &lcd_param_text83, &conf.servoTrim[3], &__ST,
+  &lcd_param_text84, &conf.servoTrim[4], &__ST,
+  &lcd_param_text85, &conf.servoTrim[5], &__ST,
+  &lcd_param_text86, &conf.servoTrim[6], &__ST,
 #endif
 #ifdef LOG_VALUES
   &lcd_param_text39, &failsafeEvents, &__L,
@@ -1217,8 +1279,8 @@ void output_VmAbars() {
 #ifdef POWERMETER
   //     intPowerMeterSum = (pMeter[PMOTOR_SUM]/PLEVELDIV);
   //   pAlarm = (uint32_t) powerTrigger1 * (uint32_t) PLEVELSCALE * (uint32_t) PLEVELDIV; // need to cast before multiplying
-  if (powerTrigger1)
-  LCDbar(8, (intPowerMeterSum/(uint16_t)powerTrigger1) *2 );// bar graph powermeter (scale intPowerMeterSum/powerTrigger1 with *100/PLEVELSCALE)
+  if (conf.powerTrigger1)
+  LCDbar(8, (intPowerMeterSum/(uint16_t)conf.powerTrigger1) *2 );// bar graph powermeter (scale intPowerMeterSum/powerTrigger1 with *100/PLEVELSCALE)
 #endif
 }
 void fill_line1_cycle() {
@@ -1413,14 +1475,14 @@ void lcd_telemetry() {
         //                   0123456789012345
         if (armed) line1[14] = 'A'; else line1[14] = 'a';
         if (failsafeCnt > 5) line1[15] = 'F'; else line1[15] = 'f';
-        line1[0]=GPS_latitude<0?'S':'N';
-        line1[8]=GPS_longitude<0?'W':'E';
+        line1[0]=GPS_coord[LAT]<0?'S':'N';
+        line1[8]=GPS_coord[LON]<0?'W':'E';
         line1[6]=0x30+GPS_numSat;
         LCDsetLine(1);LCDprintChar(line1);
        
       } else {
-        int32_t aGPS_latitude = abs(GPS_latitude);
-        int32_t aGPS_longitude = abs(GPS_longitude);
+        int32_t aGPS_latitude = abs(GPS_coord[LAT]);
+        int32_t aGPS_longitude = abs(GPS_coord[LON]);
         int pos=0;
         strcpy_P(line2,PSTR("------- ------- "));
        
