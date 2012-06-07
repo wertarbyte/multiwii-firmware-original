@@ -234,6 +234,11 @@ void datenschlag_process() {
 			case (1<<5 | 0x0A): // 0x2A
 				/* AUX channel switches, 1 byte payload */
 				datenschlag_process_aux(&frame);
+				break;
+			case (2<<5 | 0x04): // 0x44
+				/* headfree adjustment, 2 byte payload */
+				headFreeModeHold = *(int16_t*) &frame.data;
+				break;
 			default:
 				break;
 		}
