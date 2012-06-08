@@ -166,7 +166,7 @@ void datenschlag_apply_aux(void) {
 static struct {
 	uint16_t min;
 	uint16_t max;
-} datenschlag_calib = {~0, 0};
+} datenschlag_calib = {~(uint16_t)0, 0};
 
 void datenschlag_feed(uint16_t value) {
 	static uint16_t last_token = 0;
