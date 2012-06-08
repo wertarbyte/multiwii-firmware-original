@@ -50,6 +50,11 @@ void blinkLedRing() {
 
 #if defined(LED_FLASHER)
 static uint8_t led_flasher_sequence = 0;
+/* if we load a specific sequence and do not want it change, set this flag */
+static enum {
+	LED_FLASHER_AUTO,
+	LED_FLASHER_CUSTOM
+} led_flasher_control = LED_FLASHER_AUTO;
 
 void init_led_flasher() {
   LED_FLASHER_DDR |= (1<<LED_FLASHER_BIT);
@@ -60,12 +65,70 @@ void led_flasher_set_sequence(uint8_t s) {
   led_flasher_sequence = s;
 }
 
-void switch_led_flasher() {
-  uint8_t seg = (currentTime/1000/125)%8;
-  if (led_flasher_sequence & 1<<seg) {
+void inline switch_led_flasher(uint8_t on) {
+  if (on) {
     LED_FLASHER_PORT |= (1<<LED_FLASHER_BIT);
   } else {
     LED_FLASHER_PORT &= ~(1<<LED_FLASHER_BIT);
+  }
+}
+
+void auto_switch_led_flasher() {
+  uint8_t seg = (currentTime/1000/125)%8;
+  if (led_flasher_sequence & 1<<seg) {
+    switch_led_flasher(1);
+  } else {
+    switch_led_flasher(0);
+  }
+}
+
+/* auto-select a fitting sequence according to the
+ * copter situation
+ */
+void led_flasher_autoselect_sequence() {
+  if (led_flasher_control != LED_FLASHER_AUTO) return;
+  #if defined(LED_FLASHER_SEQUENCE_MAX)
+  /* do we want the complete illumination no questions asked? */
+  if (rcOptions[BOXLEDMAX]) {
+  #else
+  if (0) {
+  #endif
+    led_flasher_set_sequence(LED_FLASHER_SEQUENCE_MAX);
+  } else {
+    /* do we have a special sequence for armed copters? */
+    #if defined(LED_FLASHER_SEQUENCE_ARMED)
+    led_flasher_set_sequence(armed ? LED_FLASHER_SEQUENCE_ARMED : LED_FLASHER_SEQUENCE);
+    #else
+    /* Let's load the plain old boring sequence */
+    led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
+    #endif
+  }
+}
+
+#endif
+
+#if defined(LANDING_LIGHTS_DDR)
+void init_landing_lights(void) {
+  LANDING_LIGHTS_DDR |= 1<<LANDING_LIGHTS_BIT;
+}
+
+void inline switch_landing_lights(uint8_t on) {
+  if (on) {
+    LANDING_LIGHTS_PORT |= 1<<LANDING_LIGHTS_BIT;
+  } else {
+    LANDING_LIGHTS_PORT &= ~(1<<LANDING_LIGHTS_BIT);
+  }
+}
+
+void auto_switch_landing_lights(void) {
+  if (rcOptions[BOXLLIGHTS]
+  #if defined(LANDING_LIGHTS_AUTO_ALTITUDE) & SONAR
+	|| (sonarAlt >= 0 && sonarAlt <= LANDING_LIGHTS_AUTO_ALTITUDE && armed)
+  #endif
+  ) {
+    switch_landing_lights(1);
+  } else {
+    switch_landing_lights(0);
   }
 }
 #endif

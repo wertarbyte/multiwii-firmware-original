@@ -42,9 +42,33 @@ March  2012     V2.0
 #define BOXPASSTHRU  8
 #define BOXHEADFREE  9
 #define BOXBEEPERON  10
+/* we want maximum illumination */
+#define BOXLEDMAX    11
+/* enable landing lights at any altitude */
+#define BOXLLIGHTS   12
+/* acquire heading for HEADFREE mode */
+#define BOXHEADADJ   13
 
-#define CHECKBOXITEMS 11
 #define PIDITEMS 10
+#define CHECKBOXITEMS 14
+
+/* names for dynamic generation of config GUI */
+char boxnames[] PROGMEM =
+  "ACC;"
+  "BARO;"
+  "MAG;"
+  "CAMSTAB;"
+  "CAMTRIG;"
+  "ARM;"
+  "GPS HOME;"
+  "GPS HOLD;"
+  "PASSTHRU;"
+  "HEADFREE;"
+  "BEEPER;"
+  "LEDMAX;"
+  "LLIGHTS;"
+  "HEADADJ;"
+;
 
 static uint32_t currentTime = 0;
 static uint16_t previousTime = 0;
@@ -237,10 +261,22 @@ void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
   uint8_t i,r;
   for (r=0;r<repeat;r++) {
     for(i=0;i<num;i++) {
+      #if defined(LED_FLASHER)
+        switch_led_flasher(1);
+      #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(1);
+      #endif
       LEDPIN_TOGGLE; // switch LEDPIN state
       BUZZERPIN_ON;
       delay(wait);
       BUZZERPIN_OFF;
+      #if defined(LED_FLASHER)
+        switch_led_flasher(0);
+      #endif
+      #if defined(LANDING_LIGHTS_DDR)
+        switch_landing_lights(0);
+      #endif
     }
     delay(60);
   }
@@ -357,7 +393,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   #endif
 
   #if defined(LED_FLASHER)
-    switch_led_flasher();
+    auto_switch_led_flasher();
   #endif
 
   if ( currentTime > calibratedAccTime ) {
@@ -499,6 +535,9 @@ void setup() {
   #endif
   #ifdef LCD_CONF_DEBUG
     configurationLoop();
+  #endif
+  #ifdef LANDING_LIGHTS_DDR
+    init_landing_lights();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
   #if defined(LED_FLASHER)
@@ -661,6 +700,9 @@ void loop () {
         rcDelayCommand = 0;
       }
     }
+    #if defined(LED_FLASHER)
+      led_flasher_autoselect_sequence();
+    #endif
     
     #if defined(INFLIGHT_ACC_CALIBRATION)
       if (AccInflightCalibrationArmed && armed == 1 && rcData[THROTTLE] > MINCHECK && !rcOptions[BOXARM] ){ // Copter is airborne and you are turning it off via boxarm : start measurement
@@ -720,6 +762,10 @@ void loop () {
           headFreeMode = 1;
         }
       } else headFreeMode = 0;
+      if (rcOptions[BOXHEADADJ]) {
+        /* acquire new heading */
+        headFreeModeHold = heading;
+      }
     #endif
     
     #if GPS
@@ -758,7 +804,7 @@ void loop () {
         if (rcOptions[BOXGPSHOME]) {
           if (GPSModeHome == 0)  {
             GPSModeHome = 1;
-            GPS_set_next_wp(GPS_home[LAT],GPS_home[LON]);
+            GPS_set_next_wp(&GPS_home[LAT],&GPS_home[LON]);
             nav_mode    = NAV_MODE_WP;
           }
         } else {
@@ -769,7 +815,7 @@ void loop () {
             GPSModeHold = 1;
             GPS_hold[LAT] = GPS_coord[LAT];
             GPS_hold[LON] = GPS_coord[LON];
-            GPS_set_next_wp(GPS_hold[LAT],GPS_hold[LON]);
+            GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
             nav_mode = NAV_MODE_POSHOLD;
           }
         } else {
@@ -811,6 +857,9 @@ void loop () {
       case 4:
         #if SONAR
           Sonar_update();debug3 = sonarAlt;
+        #endif
+        #ifdef LANDING_LIGHTS_DDR
+          auto_switch_landing_lights();
         #endif
         break;
     }
