@@ -171,7 +171,7 @@ static struct {
 void datenschlag_feed(uint16_t value) {
 	static uint16_t last_token = 0;
 	/* let the calibration decay over time */
-	if (datenschlag_calib.min < ~0) datenschlag_calib.min++;
+	if (datenschlag_calib.min < ~((uint16_t)0)) datenschlag_calib.min++;
 	if (datenschlag_calib.max >  0) datenschlag_calib.max--;
 	/* calibrate */
 	if (value < datenschlag_calib.min) datenschlag_calib.min = value;
