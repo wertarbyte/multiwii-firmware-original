@@ -3,7 +3,7 @@ BOARD = atmega328
 # BOARD = atmega168
 
 # GLFAG = 
-# OFLAG = -Os
+OFLAG = -Os
 # AVRDUDECONFIG = -D -C /etc/avrdude.conf
 SKETCH        = MultiWii
 SKETCHBOOK    = .
