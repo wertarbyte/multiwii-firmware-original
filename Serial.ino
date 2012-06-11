@@ -377,9 +377,10 @@ void serialize16(int16_t a) {
 }
 
 void serialize8(uint8_t a)  {
-  headTX++;
-  if (headTX == TX_BUFFER_SIZE) {
+  if (headTX == sizeof(bufTX)-1) {
     headTX = 0;
+  } else {
+    headTX++;
   }
   bufTX[headTX] = a;
   checksum ^= a;
@@ -391,10 +392,12 @@ void serialize8(uint8_t a)  {
 #if !defined(PROMICRO)
   ISR_UART {
     if (headTX != tailTX) {
-      tailTX++;
-      if (tailTX == TX_BUFFER_SIZE) {
+      if (tailTX == sizeof(bufTX)-1) {
         tailTX = 0;
+      } else {
+        tailTX++;
       }
+
       UDR0 = bufTX[tailTX];  // Transmit next byte in the ring
     }
     if (tailTX == headTX) UCSR0B &= ~(1<<UDRIE0); // Check if all data is transmitted . if yes disable transmitter UDRE interrupt
@@ -452,9 +455,10 @@ static void inline store_uart_in_buf(uint8_t data, uint8_t portnum) {
   /* the received data byte */
   uint8_t d = data;
   uint8_t i = serialHeadRX[portnum];
-  i++;
-  if (i == RX_BUFFER_SIZE) {
+  if (i == RX_BUFFER_SIZE-1) {
     i = 0;
+  } else {
+    i++;
   }
   /* we did not bite our own tail? */
   if (i != serialTailRX[portnum]) {
@@ -503,9 +507,10 @@ uint8_t SerialRead(uint8_t port) {
   #endif
   uint8_t c = serialBufferRX[serialTailRX[port]][port];
   if ((serialHeadRX[port] != serialTailRX[port])) {
-    serialTailRX[port]++;
-    if (serialTailRX[port] == RX_BUFFER_SIZE) {
+    if (serialTailRX[port] == RX_BUFFER_SIZE-1) {
       serialTailRX[port] = 0;
+    } else {
+      serialTailRX[port]++;
     }
   }
   return c;
