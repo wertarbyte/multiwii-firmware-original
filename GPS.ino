@@ -394,13 +394,13 @@ void GPS_NewData() {
   #if defined(GPS_FROM_OSD)
     if(GPS_update) {
       if (flag.GPS_FIX && GPS_numSat > 3) {
-        if (!flag.GPS_HOME_FIX) {
-          flag.GPS_HOME_FIX = 1;
+        if (!flag.GPS_FIX_HOME) {
+          flag.GPS_FIX_HOME = 1;
           GPS_home[LAT] = GPS_coord[LAT];
           GPS_home[LON] = GPS_coord[LON];
         }
         if(flag.GPS_HOLD_MODE) {
-          GPS_distance(GPS_hold[LAT],GPS_hold[LON],GPS_coord[LAT],GPS_coord[LON], &GPS_distanceToHold, &GPS_directionToHold);
+        }
         else
           GPS_distance(GPS_home[LAT],GPS_home[LON],GPS_coord[LAT],GPS_coord[LON], &GPS_distanceToHome, &GPS_directionToHome);
         }

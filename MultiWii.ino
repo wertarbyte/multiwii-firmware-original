@@ -267,7 +267,7 @@ static int16_t  GPS_angle[2] = { 0, 0};                      // it's the angles 
 #if defined(I2C_GPS)
 static uint16_t GPS_ground_course = 0;                       // degrees*10
 #endif
-#if defined(GPS_SERIAL)
+#if defined(GPS_SERIAL) || defined(GPS_FROM_OSD)
 static uint8_t  GPS_Present = 0;                             // Checksum from Gps serial
 #endif
 static uint8_t  GPS_Enable  = 0;
