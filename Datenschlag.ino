@@ -24,6 +24,7 @@ static uint8_t ds_w_pos = 0;
 static uint8_t ds_r_pos = 0;
 
 int32_t ds_checksum_errors = 0;
+int32_t ds_frames_processed = 0;
 
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
@@ -213,6 +214,8 @@ void datenschlag_process() {
 			debug2 = ds_checksum_errors;
 			continue;
 		}
+		ds_frames_processed++;
+		debug1 = ds_frames_processed;
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
