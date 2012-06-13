@@ -23,6 +23,8 @@ static uint8_t ds_buffer_pos = 0;
 static uint8_t ds_w_pos = 0;
 static uint8_t ds_r_pos = 0;
 
+int32_t ds_checksum_errors = 0;
+
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
 		struct ds_frame_t *f = &ds_buffer[ds_w_pos];
@@ -206,7 +208,11 @@ void datenschlag_reset() {
 void datenschlag_process() {
 	struct ds_frame_t frame;
 	while (decoder_get_frame(&frame)) {
-		if (! decoder_verify_frame(&frame)) continue;
+		if (! decoder_verify_frame(&frame)) {
+			ds_checksum_errors++;
+			debug2 = ds_checksum_errors;
+			continue;
+		}
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
