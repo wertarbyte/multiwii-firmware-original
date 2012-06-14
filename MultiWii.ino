@@ -946,6 +946,9 @@ void loop () {
         #ifdef LANDING_LIGHTS_DDR
           auto_switch_landing_lights();
         #endif
+        #ifdef I2CAM_GIMBAL_SERVO
+          set_i2cam_gimbal();
+        #endif
         break;
     }
   }

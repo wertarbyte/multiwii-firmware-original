@@ -1114,3 +1114,24 @@ void mixTable() {
     }
   #endif
 }
+
+#ifdef I2CAM_GIMBAL_SERVO
+int16_t gimbal_base_angle[2] = { 0, 0 };
+
+void set_i2cam_gimbal() {
+  i2c_rep_start(I2CAM_ADDRESS<<1);  // I2C write direction
+  i2c_write(3); // servo offset
+  for (uint8_t i=0; i<2; i++) {
+    int16_t deg = 900+gimbal_base_angle[i];
+    if (rcOptions[BOXCAMSTAB]) {
+      deg -= angle[i];
+      if (deg < 0) deg = 0;
+      if (deg > 1800) deg = 1800;
+    }
+
+    uint8_t value = (255L*deg/1800);
+    i2c_write(value); // servo position
+  }
+  i2c_stop();
+}
+#endif
