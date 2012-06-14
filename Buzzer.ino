@@ -14,7 +14,7 @@ void buzzer(uint8_t warn_vbat){
   //===================== Beeps for changing rcOptions =====================
   #if defined(RCOPTIONSBEEP)
     static uint8_t i = 0;
-    static uint8 last_rcOptions[CHECKBOXITEMS];
+    static uint8_t last_rcOptions[CHECKBOXITEMS];
     if (last_rcOptions[i] != rcOptions[i]){toggleBeep = 1;}
     last_rcOptions[i] = rcOptions[i]; 
     i++;
