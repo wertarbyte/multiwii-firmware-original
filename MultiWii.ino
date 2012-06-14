@@ -15,6 +15,7 @@ March  2012     V2.0
 #include <avr/pgmspace.h>
 #define  VERSION  201
 
+
 /*********** RC alias *****************/
 #define ROLL       0
 #define PITCH      1
@@ -306,6 +307,38 @@ static int16_t	nav[2];
 static int8_t  nav_mode = NAV_MODE_NONE;            //Navigation mode
 
 #if defined(DEBUG_MEM)
+extern uint8_t _end;  // end of program variables
+extern uint8_t __stack; // start of stack (highest RAM address)
+
+void paintStack(void) __attribute__ ((naked)) __attribute__ ((section (".init1")));    // Make sure this is executed at the first time
+
+void paintStack(void) {
+  //using asm since compiller could not be trusted here
+    __asm volatile ("    ldi r30,lo8(_end)\n"
+                    "    ldi r31,hi8(_end)\n"
+                    "    ldi r24,lo8(0xa5)\n" /* Paint color = 0xa5 */
+                    "    ldi r25,hi8(__stack)\n"
+                    "    rjmp .cmp\n"
+                    ".loop:\n"
+                    "    st Z+,r24\n"
+                    ".cmp:\n"
+                    "    cpi r30,lo8(__stack)\n"
+                    "    cpc r31,r25\n"
+                    "    brlo .loop\n"
+                    "    breq .loop"::);
+}
+
+uint16_t untouchedStack(void) {
+    const uint8_t *ptr = &_end;
+    uint16_t       count = 0;
+
+    while(*ptr == 0xa5 && ptr <= &__stack) {
+        ptr++; count++;
+    }
+
+    return count;
+}
+
 size_t available_mem() {
   uint8_t * heapptr;
   uint8_t * stackptr;
@@ -314,13 +347,6 @@ size_t available_mem() {
   free(stackptr);
   stackptr =  (uint8_t *)(SP);
   return stackptr-heapptr;
-}
-
-static size_t min_mem = 0xFFFF;
-/* spread this probe function throughout the code you wish to inspect */
-void update_min_mem() {
-  size_t current = available_mem();
-  if (current < min_mem) min_mem = current;
 }
 #endif
 
@@ -987,6 +1013,9 @@ void loop () {
         #endif
         break;
       case 4:
+        #if defined(DEBUG_MEM)
+          debug1 = untouchedStack();
+        #endif
         #if SONAR
           Sonar_update();debug3 = sonarAlt;
         #endif
@@ -1075,11 +1104,6 @@ void loop () {
                       
     axisPID[axis] =  PTerm + ITerm - DTerm;
   }
-
-  #if defined(DEBUG_MEM)
-    update_min_mem();
-    debug2 = min_mem;
-  #endif
 
   mixTable();
   writeServos();
