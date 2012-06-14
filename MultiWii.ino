@@ -86,6 +86,23 @@ const char pidnames[] PROGMEM =
   "VEL;"
 ;
 
+const PROGMEM
+struct {
+  int8_t decimal_scale[3]; /* 1 -> *10, 0 -> *1, -1 -> /10, -2 -> /100 etc. */
+  uint8_t max[3];
+} pidconf[PIDITEMS] = {
+  { { -1, -3,  0}, { 20, 250, 100} }, // ROLL
+  { { -1, -3,  0}, { 20, 250, 100} }, // PITCH
+  { { -1, -3,  0}, { 20, 250, 100} }, // YAW
+  { { -1, -3,  0}, { 20, 250, 100} }, // ALT
+  { { -2, -2, -3}, {250, 250,   0} }, // Pos
+  { { -1, -2, -3}, {250, 250, 250} }, // PosR
+  { { -1, -2, -3}, {250, 250, 250} }, // NavR
+  { { -1, -2,  0}, { 20, 250, 100} }, // LEVEL
+  { { -1, -3,  0}, { 20, 250, 100} }, // MAG
+  { {  0,  0,  0}, {  0,   0,   0} }, // VEL (unsused)
+};
+
 #ifdef USE_BITFLAGS
   #define BITFLAG(v) uint8_t v : 1
 #else

@@ -32,6 +32,7 @@
 #define MSP_BOXNAMES             116   //out message         the aux switch names
 #define MSP_PIDNAMES             117   //out message         the PID names
 #define MSP_HEADING              118   //out message         {FLAG_MAG_MODE, FLAG_HEADFREE_MODE}, current heading, mag heading, reference heading
+#define MSP_PIDCONF              119   //out message         scaling and maximum values of PIDITEMS
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -96,6 +97,13 @@ uint8_t getNameLength(PGM_P s) {
 void serializeNames(PGM_P s) {
   for (PGM_P c = s; pgm_read_byte(c); c++) {
     serialize8(pgm_read_byte(c));
+  }
+}
+
+void serializePidconf() {
+  uint8_t *c = (uint8_t *) &pidconf;
+  for (uint8_t i=0; i < sizeof(pidconf); i++) {
+    serialize8(pgm_read_byte(&c[i]));
   }
 }
 
@@ -310,6 +318,10 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
    case MSP_PIDNAMES:
      headSerialReply(c,getNameLength(pidnames));
      serializeNames(pidnames);
+     break;
+   case MSP_PIDCONF:
+     headSerialReply(c,sizeof(pidconf));
+     serializePidconf();
      break;
    case MSP_MISC:
      headSerialReply(c,2);
