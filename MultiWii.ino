@@ -1024,7 +1024,7 @@ void loop () {
     //debug2 = GPS_angle[ROLL];
     //debug3 = GPS_angle[PITCH];
     // Check that we really need to navigate ?
-    if ( (!flag.GPS_HOME_MODE && !flag.GPS_HOME_MODE) || !flag.GPS_FIX_HOME ) {
+    if ( (!flag.GPS_HOME_MODE && !flag.GPS_HOLD_MODE) || !flag.GPS_FIX_HOME ) {
       // If not. Reset nav loops and all nav related parameters
       GPS_reset_nav();
     } else {
