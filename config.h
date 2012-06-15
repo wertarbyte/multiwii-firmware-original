@@ -204,6 +204,8 @@
     /* I²C camera trigger (i2cam) */
     //#define CAMTRIG_I2CAM
     //#define I2CAM_INTERVAL ((uint16_t)1000)
+    //#define I2CAM_GIMBAL_SERVO
+    //#define I2CAM_ADDRESS 0x4C
 
   /***********************          Flying Wing                   ***********************/
     /* you can change change servo orientation and servo min/max values here */

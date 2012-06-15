@@ -989,6 +989,17 @@ void loop () {
       i2c_write(I2CAM_INTERVAL >> 8);
       i2c_stop();
     #endif
+    #ifdef CAMTRIG_I2CAM
+      #define I2CAM_ADDRESS 0x4C
+      #ifndef I2CAM_INTERVAL
+        #define I2CAM_INTERVAL ((uint16_t)1000)
+      #endif
+      i2c_rep_start(I2CAM_ADDRESS<<1);  // I2C write direction
+      i2c_write(rcOptions[BOXCAMTRIG]); // enable snapshots?
+      i2c_write(I2CAM_INTERVAL & 0xFF); // set interval
+      i2c_write(I2CAM_INTERVAL >> 8);
+      i2c_stop();
+    #endif
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
     switch (taskOrder++ % 5) {
@@ -1021,6 +1032,9 @@ void loop () {
         #endif
         #ifdef LANDING_LIGHTS_DDR
           auto_switch_landing_lights();
+        #endif
+        #ifdef I2CAM_GIMBAL_SERVO
+          set_i2cam_gimbal();
         #endif
         break;
     }
