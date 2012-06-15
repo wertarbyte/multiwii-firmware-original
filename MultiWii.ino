@@ -209,6 +209,10 @@ static int16_t gyroData[3] = {0,0,0};
 static int16_t gyroZero[3] = {0,0,0};
 static int16_t angle[2]    = {0,0};  // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
 
+#if defined(I2CAM_GIMBAL_SERVO)
+int16_t gimbal_base_angle[2] = { 0, 0 };
+#endif
+
 // *************************
 // motor and servo functions
 // *************************
