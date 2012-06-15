@@ -251,7 +251,7 @@ void datenschlag_process() {
 #if defined(I2CAM_GIMBAL_SERVO)
 			case (1<<5 | 0x0C): //0x2C
 				/* camera gimbal adjustment of pitch axis */
-				gimbal_base_angle[PITCH] = frame.data[0];
+				gimbal_base_angle[PITCH] = (1800L*frame.data[0]/255)-900;;
 				break;
 #endif
 			default:
