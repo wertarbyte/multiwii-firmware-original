@@ -205,6 +205,8 @@
     //#define CAMTRIG_I2CAM
     //#define I2CAM_INTERVAL ((uint16_t)1000)
     //#define I2CAM_GIMBAL_SERVO
+    //#define I2CAM_GIMBAL_BASE_ANGLE_PITCH 90
+    //#define I2CAM_GIMBAL_BASE_ANGLE_ROLL  90
     //#define I2CAM_ADDRESS 0x4C
 
   /***********************          Flying Wing                   ***********************/
