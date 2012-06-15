@@ -246,8 +246,14 @@ void datenschlag_process() {
 				break;
 			case (2<<5 | 0x04): // 0x44
 				/* headfree adjustment, 2 byte payload */
-				headFreeModeHold = *(int16_t*) &frame.data;
+				headFreeModeHold = ((int16_t) frame.data[0])<<8 | frame.data[1];
 				break;
+#if defined(I2CAM_GIMBAL_SERVO)
+			case (1<<5 | 0x0C): //0x2C
+				/* camera gimbal adjustment of pitch axis */
+				gimbal_base_angle[PITCH] = frame.data[0];
+				break;
+#endif
 			default:
 				break;
 		}
