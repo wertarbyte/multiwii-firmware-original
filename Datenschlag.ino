@@ -15,7 +15,7 @@ struct ds_frame_t {
 	uint8_t chk; /* checksum (XOR all other fields) */
 };
 
-#define DS_FRAME_BUFFER_SIZE 2
+#define DS_FRAME_BUFFER_SIZE 5
 /* ring buffer and positions for reader and writer */
 static struct ds_frame_t ds_buffer[DS_FRAME_BUFFER_SIZE];
 /* nibble position in the current frame */
