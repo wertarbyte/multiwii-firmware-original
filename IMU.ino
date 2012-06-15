@@ -268,7 +268,7 @@ void getEstimatedAltitude(){
   static int32_t BaroHigh,BaroLow;
   int32_t temp32;
   int16_t last;
-  
+
   if (currentTime < deadLine) return;
   deadLine = currentTime + UPDATE_INTERVAL; 
 

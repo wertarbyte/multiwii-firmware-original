@@ -86,34 +86,6 @@ const char pidnames[] PROGMEM =
   "VEL;"
 ;
 
-#ifdef USE_BITFLAGS
-  #define BITFLAG(v) uint8_t v : 1
-#else
-  #define BITFLAG(v) uint8_t v
-#endif
-
-struct _flag_t {
-  BITFLAG( OK_TO_ARM );
-  BITFLAG( ARMED );
-  BITFLAG( I2C_INIT_DONE );
-  BITFLAG( ACC_CALIBRATED );
-  BITFLAG( NUNCHUKDATA );
-  BITFLAG( ACC_MODE );
-  BITFLAG( MAG_MODE );
-  BITFLAG( BARO_MODE );
-  BITFLAG( GPS_HOME_MODE );
-  BITFLAG( GPS_HOLD_MODE );
-  BITFLAG( HEADFREE_MODE );
-  BITFLAG( PASSTHRU_MODE );
-
-  BITFLAG( GPS_FIX );
-  BITFLAG( GPS_FIX_HOME );
-
-  BITFLAG( SMALL_ANGLES_25 );
-
-  BITFLAG( CALIBRATE_MAG );
-} f;
-
 static uint32_t currentTime = 0;
 static uint16_t previousTime = 0;
 static uint16_t cycleTime = 0;     // this is the number in micro second to achieve a full loop, it can differ a little and is taken into account in the PID loop
@@ -134,8 +106,27 @@ static int16_t  errorAltitudeI = 0;
 #if defined(BUZZER)
 static uint8_t  toggleBeep = 0;
 #endif
-static int16_t  debug1,debug2,debug3,debug4;
+static int16_t  debug[4];
 static int16_t  sonarAlt; //to think about the unit
+
+struct flags_struct {
+  uint8_t OK_TO_ARM :1 ;
+  uint8_t ARMED :1 ;
+  uint8_t I2C_INIT_DONE :1 ; // For i2c gps we have to now when i2c init is done, so we can update parameters to the i2cgps from eeprom (at startup it is done in setup())
+  uint8_t ACC_CALIBRATED :1 ;
+  uint8_t NUNCHUKDATA :1 ;
+  uint8_t ACC_MODE :1 ;
+  uint8_t MAG_MODE :1 ;
+  uint8_t BARO_MODE :1 ;
+  uint8_t GPS_HOME_MODE :1 ;
+  uint8_t GPS_HOLD_MODE :1 ;
+  uint8_t HEADFREE_MODE :1 ;
+  uint8_t PASSTHRU_MODE :1 ;
+  uint8_t GPS_FIX :1 ;
+  uint8_t GPS_FIX_HOME :1 ;
+  uint8_t SMALL_ANGLES_25 :1 ;
+  uint8_t CALIBRATE_MAG :1 ;
+} f;
 
 //for log
 #if defined(LOG_VALUES) || defined(LCD_TELEMETRY)
@@ -269,38 +260,31 @@ static int16_t  GPS_directionToHome;                         // direction to hom
 static uint16_t GPS_altitude,GPS_speed;                      // altitude in 0.1m and speed in 0.1m/s
 static uint8_t  GPS_update = 0;                              // it's a binary toogle to distinct a GPS position update
 static int16_t  GPS_angle[2] = { 0, 0};                      // it's the angles that must be applied for GPS correction
-#if defined(I2C_GPS)
 static uint16_t GPS_ground_course = 0;                       // degrees*10
-#endif
-#if defined(GPS_SERIAL) || defined(GPS_FROM_OSD)
 static uint8_t  GPS_Present = 0;                             // Checksum from Gps serial
-#endif
 static uint8_t  GPS_Enable  = 0;
 
 #define LAT  0
 #define LON  1
 // The desired bank towards North (Positive) or South (Negative) : latitude
 // The desired bank towards East (Positive) or West (Negative)   : longitude
-static int16_t	nav[2];
+static int16_t nav[2];
 
-//////////////////////////////////////////////////////////////////////////////
-// POSHOLD control gains
-//
+// default POSHOLD control gains
 #define POSHOLD_P              .11
 #define POSHOLD_I              0.0
-#define POSHOLD_IMAX           20		// degrees
+#define POSHOLD_IMAX           20        // degrees
 
-#define POSHOLD_RATE_P         2.0			//
-#define POSHOLD_RATE_I         0.08			// Wind control
-#define POSHOLD_RATE_D         0.045			// try 2 or 3 for POSHOLD_RATE 1
-#define POSHOLD_RATE_IMAX      20			// degrees
-//////////////////////////////////////////////////////////////////////////////
-// Navigation PID gains
-//
-#define NAV_P                  1.4		//
-#define NAV_I                  0.20		// Wind control
-#define NAV_D                  0.08		//
-#define NAV_IMAX               20		// degrees
+#define POSHOLD_RATE_P         2.0
+#define POSHOLD_RATE_I         0.08      // Wind control
+#define POSHOLD_RATE_D         0.045     // try 2 or 3 for POSHOLD_RATE 1
+#define POSHOLD_RATE_IMAX      20        // degrees
+
+// default Navigation PID gains
+#define NAV_P                  1.4
+#define NAV_I                  0.20      // Wind control
+#define NAV_D                  0.08      //
+#define NAV_IMAX               20        // degrees
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Serial GPS only variables
@@ -308,7 +292,6 @@ static int16_t	nav[2];
 #define NAV_MODE_NONE          0
 #define NAV_MODE_POSHOLD       1
 #define NAV_MODE_WP            2
-static int8_t  nav_mode = NAV_MODE_NONE;            //Navigation mode
 
 #if defined(DEBUG_MEM)
 extern uint8_t _end;  // end of program variables
@@ -354,8 +337,7 @@ size_t available_mem() {
 }
 #endif
 
-#define set_flag(f, v) ( flag_mask[(f)] = !!(v) )
-#define get_flag(f) ( flag_mask[(f)] )
+static uint8_t nav_mode = NAV_MODE_NONE;            //Navigation mode
 
 void blinkLED(uint8_t num, uint8_t wait,uint8_t repeat) {
   uint8_t i,r;
@@ -511,11 +493,11 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     }
   }
 
-    #if defined(GPS_PROMINI)
-      if(GPS_Enable == 0){serialCom();}
-    #else
-      serialCom();
-    #endif
+  #if defined(GPS_PROMINI)
+    if(GPS_Enable == 0) {serialCom();}
+  #else
+    serialCom();
+  #endif
 
   #if defined(POWERMETER)
     intPowerMeterSum = (pMeter[PMOTOR_SUM]/PLEVELDIV);
@@ -658,7 +640,7 @@ void setup() {
 
 // ******** Main Loop *********
 void loop () {
-  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at RC_FREQ Hz) the sticks must be maintained to run or switch off motors
+  static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
   uint8_t axis,i;
   int16_t error,errorAngle;
   int16_t delta,deltaSum;
@@ -802,12 +784,10 @@ void loop () {
         rcDelayCommand = 0;
     } else if (rcData[THROTTLE] > MAXCHECK && !f.ARMED) {
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK) {        // throttle=max, yaw=left, pitch=min
-        if (rcDelayCommand == (20*RC_FREQ/50)) calibratingA=400;
+        if (rcDelayCommand == 20) calibratingA=400;
         rcDelayCommand++;
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] < MINCHECK) { // throttle=max, yaw=right, pitch=min  
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
-          f.CALIBRATE_MAG = 1; // MAG calibration request
-        }
+        if (rcDelayCommand == (20*RC_FREQ/50)) f.CALIBRATE_MAG = 1; // MAG calibration request
         rcDelayCommand++;
       } else if (rcData[PITCH] > MAXCHECK) {
          conf.angleTrim[PITCH]+=2;writeParams(1);
@@ -910,8 +890,7 @@ void loop () {
         f.HEADFREE_MODE = 0;
       }
       if (rcOptions[BOXHEADADJ]) {
-        /* acquire new heading */
-        headFreeModeHold = heading;
+        headFreeModeHold = heading; // acquire new heading
       }
     #endif
     
@@ -978,20 +957,10 @@ void loop () {
     #ifdef FIXEDWING 
       f.HEADFREE_MODE = 0;
     #endif
+
     #ifdef DATENSCHLAG_CHANNEL
       /* process any received Datenschlag frames */
       datenschlag_process();
-    #endif
-    #ifdef CAMTRIG_I2CAM
-      #define I2CAM_ADDRESS 0x4C
-      #ifndef I2CAM_INTERVAL
-        #define I2CAM_INTERVAL ((uint16_t)1000)
-      #endif
-      i2c_rep_start(I2CAM_ADDRESS<<1);  // I2C write direction
-      i2c_write(rcOptions[BOXCAMTRIG]); // enable snapshots?
-      i2c_write(I2CAM_INTERVAL & 0xFF); // set interval
-      i2c_write(I2CAM_INTERVAL >> 8);
-      i2c_stop();
     #endif
     #ifdef CAMTRIG_I2CAM
       #define I2CAM_ADDRESS 0x4C
@@ -1068,12 +1037,8 @@ void loop () {
     }
   #endif
   #if GPS
-    //debug2 = GPS_angle[ROLL];
-    //debug3 = GPS_angle[PITCH];
-    // Check that we really need to navigate ?
     if ( (!f.GPS_HOME_MODE && !f.GPS_HOLD_MODE) || !f.GPS_FIX_HOME ) {
-      // If not. Reset nav loops and all nav related parameters
-      GPS_reset_nav();
+      GPS_reset_nav(); // If GPS is not activated. Reset nav loops and all nav related parameters
     } else {
       float sin_yaw_y = sin(heading*0.0174532925f);
       float cos_yaw_x = cos(heading*0.0174532925f);
