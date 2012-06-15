@@ -1002,7 +1002,12 @@
   #define PRI_SERVO_TO     2
 #elif defined(AIRPLANE)
   #define NUMBER_MOTOR     0
-  #define PRI_SERVO_FROM   4 // use servo from 4 to 8
+    #if defined(FLAPS) 
+      #define PRI_SERVO_FROM   3 // use servo from 3 to 8    
+      #undef CAMTRIG             // Disable Camtrig on A2
+    #else
+      #define PRI_SERVO_FROM   4 // use servo from 4 to 8
+    #endif  
   #define PRI_SERVO_TO     8
 #elif defined(BI)
   #define NUMBER_MOTOR     2
@@ -1377,4 +1382,26 @@
         #error "to use automatic telemetry, you MUST also define and configure LCD_TELEMETRY"
 #endif
 
+enum mwc_flag {
+  FLAG_OK_TO_ARM,
+  FLAG_ARMED,
+  FLAG_I2C_INIT_DONE,
+  FLAG_ACC_CALIBRATED,
+  FLAG_NUNCHUKDATA,
+  FLAG_ACC_MODE,
+  FLAG_MAG_MODE,
+  FLAG_BARO_MODE,
+  FLAG_GPS_HOME_MODE,
+  FLAG_GPS_HOLD_MODE,
+  FLAG_HEADFREE_MODE,
+  FLAG_PASSTHRU_MODE,
 
+  FLAG_GPS_FIX,
+  FLAG_GPS_FIX_HOME,
+
+  FLAG_SMALL_ANGLES_25,
+
+  FLAG_CALIBRATE_MAG,
+
+  FLAG_CNT
+};

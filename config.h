@@ -222,10 +222,16 @@
     #define SERVO_RATES      {100, 100, 100, 100, 100, 100, 100, 100} // Rates in 0-100%
     #define SERVO_DIRECTION  { -1,   1,   1,   -1,  1,   1,   1,   1 } // Invert servos by setting -1
 
-    //#define FLAP_CHANNEL     AUX4       // Define the Channel to controll Flaps with.If used.
-    #define FLAP_EP      { 1500, 1650 } // Endpooints for flaps on a 2 way switch else set {1020,2000} and program in radio.
-    #define FLAP_INVERT    { 1, -1 }    // Change direction om flaps { Wing1, Wing2 }
+    //#define FLAPPERONS    AUX4          // Mix Flaps with Aileroins.
+    #define FLAPPERON_EP   { 1500, 1700 } // Endpooints for flaps on a 2 way switch else set {1020,2000} and program in radio.
+    //#define FLAPPERON_EP   { 1200, 1500 } // Or Flapperons up for CrowMix 
+    #define FLAPPERON_INVERT { 1, -1 }    // Change direction om flapperons { Wing1, Wing2 }
+    
+    //#define FLAPS         AUX4          // Traditional Flaps on A2 invert with SERVO_DIRECTION servo[2).
+    #define FLAP_EP      { 1500, 1900 }   // Endpooints for flaps on a 2 way switch else set {1020,2000} and program in radio.
 
+    //#define FLAPSPEED     3             // Make flaps move slowm Higher value is Higher Speed.
+    // FlapSpeed is depending on Cykletime. High cykeltime needs higher flapspeed...
   //*************************** !!!!  Common for Heli & Airplane  !!!! ****************************//
 
     //#define D12_POWER      // Use D12 on PROMINI to power sensors. Will disable servo[4] on D12
@@ -452,6 +458,8 @@
      Additional information: http://www.multiwii.com/forum/viewtopic.php?f=8&t=503 */
   //#define LEVEL_PDF
 
+  /*****************                Buzzer                 *********************************/
+    //#define BUZZER
 
   /********                          Failsave settings                 ********************/
     /* Failsafe check pulse on THROTTLE channel. If the pulse is OFF (on only THROTTLE or on all channels) the failsafe procedure is initiated.
@@ -465,6 +473,7 @@
     #define FAILSAVE_DELAY     10                     // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example
     #define FAILSAVE_OFF_DELAY 200                    // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example
     #define FAILSAVE_THROTTLE  (MINTHROTTLE + 200)    // Throttle level used for landing - may be relative to MINTHROTTLE - as in this case
+
 
   /*****************                DFRobot LED RING    *********************************/
     /* I2C DFRobot LED RING communication */
@@ -550,6 +559,9 @@
     //#define TINY_GPS
     /* get sonar data from Tiny-GPS */
     //#define TINY_GPS_SONAR
+
+    /* indicate a valid GPS fix with at least 5 satellites by flashing the LED? */
+    //#define GPS_LED_INDICATOR
 
     /* GPS data readed from OSD -- still need some more code to work */
     //#define GPS_FROM_OSD
@@ -817,6 +829,9 @@
     /* not needed and not recommended for normal operation */
     /* will add extra code that may slow down the main loop or make copter non-flyable */
     //#define DEBUG
+
+    /* add memory debugging functions */
+    //#define DEBUG_MEM
 
     /* Use this to trigger LCD configuration without a TX - only for debugging - do NOT fly with this activated */
     //#define LCD_CONF_DEBUG

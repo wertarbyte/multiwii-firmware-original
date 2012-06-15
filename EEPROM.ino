@@ -37,8 +37,8 @@ void readEEPROM() {
       conf.tri_yaw_middle = TRI_YAW_MIDDLE;
     #endif
   #endif
-  #if defined(I2C_GPS)
-    if (i2c_init_done) GPS_set_pids();
+  #if GPS
+    if (get_flag(FLAG_I2C_INIT_DONE)) GPS_set_pids();
   #endif
 }
 
