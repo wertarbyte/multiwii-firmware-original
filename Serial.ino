@@ -163,7 +163,7 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
      headSerialReply(c,0);
      break;
    case MSP_SET_RAW_GPS:
-     flag.GPS_FIX = read8();
+     f.GPS_FIX = read8();
      GPS_numSat = read8();
      GPS_coord[LAT] = read32();
      GPS_coord[LON] = read32();
@@ -212,9 +212,9 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
      serialize16(cycleTime);
      serialize16(i2c_errors_count);
      serialize16(ACC|BARO<<1|MAG<<2|GPS<<3|SONAR<<4);
-     serialize16(flag.ACC_MODE<<BOXACC|flag.BARO_MODE<<BOXBARO|flag.MAG_MODE<<BOXMAG|flag.ARMED<<BOXARM|
-                 flag.GPS_HOME_MODE<<BOXGPSHOME|flag.GPS_HOLD_MODE<<BOXGPSHOLD|flag.HEADFREE_MODE<<BOXHEADFREE|
-                 flag.PASSTHRU_MODE<<BOXPASSTHRU|rcOptions[BOXBEEPERON]<<BOXBEEPERON|rcOptions[BOXLEDMAX]<<BOXLEDMAX|rcOptions[BOXLLIGHTS]<<BOXLLIGHTS|rcOptions[BOXHEADADJ]<<BOXHEADADJ);
+     serialize16(f.ACC_MODE<<BOXACC|f.BARO_MODE<<BOXBARO|f.MAG_MODE<<BOXMAG|f.ARMED<<BOXARM|
+                 f.GPS_HOME_MODE<<BOXGPSHOME|f.GPS_HOLD_MODE<<BOXGPSHOLD|f.HEADFREE_MODE<<BOXHEADFREE|
+                 f.PASSTHRU_MODE<<BOXPASSTHRU|rcOptions[BOXBEEPERON]<<BOXBEEPERON|rcOptions[BOXLEDMAX]<<BOXLEDMAX|rcOptions[BOXLLIGHTS]<<BOXLLIGHTS|rcOptions[BOXHEADADJ]<<BOXHEADADJ);
      break;
    case MSP_RAW_IMU:
      headSerialReply(c,18);
@@ -243,7 +243,7 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
      break;
    case MSP_RAW_GPS:
      headSerialReply(c,14);
-     serialize8(flag.GPS_FIX);
+     serialize8(f.GPS_FIX);
      serialize8(GPS_numSat);
      serialize32(GPS_coord[LAT]);
      serialize32(GPS_coord[LON]);
@@ -265,7 +265,7 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
    case MSP_HEADING:
      headSerialReply(c,7);
      /* indicate whether we are using mag stabilization or headfree mode */
-     serialize8( flag.MAG_MODE<<0 | flag.HEADFREE_MODE<<1 );
+     serialize8( f.MAG_MODE<<0 | f.HEADFREE_MODE<<1 );
      serialize16(heading);
      serialize16(magHold);
      serialize16(headFreeModeHold);
@@ -331,7 +331,7 @@ void evaluateCommand(uint8_t c, uint8_t dataSize) {
      headSerialReply(c,0);
      break;
    case MSP_MAG_CALIBRATION:
-     flag.CALIBRATE_MAG = 1;
+     f.CALIBRATE_MAG = 1;
      headSerialReply(c,0);
      break;
    case MSP_EEPROM_WRITE:
