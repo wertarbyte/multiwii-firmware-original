@@ -211,11 +211,11 @@ void datenschlag_process() {
 	while (decoder_get_frame(&frame)) {
 		if (! decoder_verify_frame(&frame)) {
 			ds_checksum_errors++;
-			debug2 = ds_checksum_errors;
+			debug[1] = ds_checksum_errors;
 			continue;
 		}
 		ds_frames_processed++;
-		debug1 = ds_frames_processed;
+		debug[0] = ds_frames_processed;
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
@@ -237,8 +237,8 @@ void datenschlag_process() {
 #endif
 			case (2<<5 | 0x0D): // 0x4D
 				/* debugging data, 2 bytes payload */
-				debug1 = frame.data[0];
-				debug2 = frame.data[1];
+				debug[0] = frame.data[0];
+				debug[1] = frame.data[1];
 				break;
 			case (1<<5 | 0x0A): // 0x2A
 				/* AUX channel switches, 1 byte payload */

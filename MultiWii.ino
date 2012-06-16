@@ -998,10 +998,10 @@ void loop () {
         break;
       case 4:
         #if defined(DEBUG_MEM)
-          debug1 = untouchedStack();
+          debug[3] = untouchedStack();
         #endif
         #if SONAR
-          Sonar_update();debug3 = sonarAlt;
+          Sonar_update();debug[2] = sonarAlt;
         #endif
         #ifdef LANDING_LIGHTS_DDR
           auto_switch_landing_lights();

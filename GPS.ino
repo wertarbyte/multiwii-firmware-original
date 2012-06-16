@@ -250,8 +250,8 @@ void GPS_NewData() {
           *varptr++ = i2c_readAck();
           *varptr++ = i2c_readNak();
           
-          debug1=nav[LAT];
-          debug2=nav[LON];
+          debug[0]=nav[LAT];
+          debug[1]=nav[LON];
           
           i2c_rep_start(I2C_GPS_ADDRESS<<1);
           i2c_write(I2C_GPS_GROUND_SPEED);          
