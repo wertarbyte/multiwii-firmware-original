@@ -665,15 +665,15 @@ void loop () {
   #endif 
 
   #if defined(DATENSCHLAG_CHANNEL)
-    #define RC_FREQ 100
-  #else
-    #define RC_FREQ 50
-  #endif
-  if (currentTime > rcTime ) { // >50Hz
-    rcTime = currentTime + (1000000L/RC_FREQ);
-    #if defined(DATENSCHLAG_CHANNEL)
+    static uint32_t dsTime  = 0;
+    if (currentTime > dsTime ) { // 100Hz
+      dsTime = currentTime + 10000;
       datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL));
-    #endif
+    }
+  #endif
+
+  if (currentTime > rcTime ) { // 50Hz
+    rcTime = currentTime + 20000;
     computeRC();
     #if defined(DATENSCHLAG_CHANNEL)
       datenschlag_apply_aux();
@@ -701,14 +701,14 @@ void loop () {
       errorAngleI[ROLL] = 0; errorAngleI[PITCH] = 0;
       rcDelayCommand++;
       if (rcData[YAW] < MINCHECK && rcData[PITCH] < MINCHECK && !f.ARMED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
+        if (rcDelayCommand == 20) {
           calibratingG=400;
           #if GPS 
             GPS_reset_home_position();
           #endif
         }
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] > MAXCHECK && !f.ARMED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
+        if (rcDelayCommand == 20) {
           #ifdef TRI
             servo[5] = 1500; // we center the yaw servo in conf mode
             writeServos();
@@ -730,7 +730,7 @@ void loop () {
       }
       #if defined(INFLIGHT_ACC_CALIBRATION)  
         else if (!f.ARMED && rcData[YAW] < MINCHECK && rcData[PITCH] > MAXCHECK && rcData[ROLL] > MAXCHECK){
-          if (rcDelayCommand == (20*RC_FREQ/50)){
+          if (rcDelayCommand == 20){
             if (AccInflightCalibrationMeasurementDone){                // trigger saving into eeprom after landing
               AccInflightCalibrationMeasurementDone = 0;
               AccInflightCalibrationSavetoEEProm = 1;
@@ -759,25 +759,25 @@ void loop () {
         rcDelayCommand = 0;
       #ifdef ALLOW_ARM_DISARM_VIA_TX_YAW
       } else if ( (rcData[YAW] < MINCHECK )  && f.ARMED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) f.ARMED = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == 20) f.ARMED = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK ) && rcData[PITCH] < MAXCHECK && !f.ARMED && calibratingG == 0 && f.ACC_CALIBRATED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
+        if (rcDelayCommand == 20) {
 	  f.ARMED = 1;
 	  headFreeModeHold = heading;
         }
       #endif
       #ifdef ALLOW_ARM_DISARM_VIA_TX_ROLL
       } else if ( (rcData[ROLL] < MINCHECK)  && f.ARMED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) f.ARMED = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
+        if (rcDelayCommand == 20) f.ARMED = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && !f.ARMED && calibratingG == 0 && f.ACC_CALIBRATED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
+        if (rcDelayCommand == 20) {
           f.ARMED = 1;
           headFreeModeHold = heading;
         }
       #endif
       #ifdef LCD_TELEMETRY_AUTO
       } else if (rcData[ROLL] < MINCHECK && rcData[PITCH] > MAXCHECK && !f.ARMED) {
-        if (rcDelayCommand == (20*RC_FREQ/50)) {
+        if (rcDelayCommand == 20) {
            if (telemetry_auto) {
               telemetry_auto = 0;
               telemetry = 0;
@@ -792,7 +792,7 @@ void loop () {
         if (rcDelayCommand == 20) calibratingA=400;
         rcDelayCommand++;
       } else if (rcData[YAW] > MAXCHECK && rcData[PITCH] < MINCHECK) { // throttle=max, yaw=right, pitch=min  
-        if (rcDelayCommand == (20*RC_FREQ/50)) f.CALIBRATE_MAG = 1; // MAG calibration request
+        if (rcDelayCommand == 20) f.CALIBRATE_MAG = 1; // MAG calibration request
         rcDelayCommand++;
       } else if (rcData[PITCH] > MAXCHECK) {
          conf.angleTrim[PITCH]+=2;writeParams(1);
