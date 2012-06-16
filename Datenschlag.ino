@@ -27,16 +27,16 @@ int32_t ds_checksum_errors = 0;
 
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
-		struct ds_frame_t *f = &ds_buffer[ds_w_pos];
-		uint8_t *b = (uint8_t *) f;
+		struct ds_frame_t *fr = &ds_buffer[ds_w_pos];
+		uint8_t *b = (uint8_t *) fr;
 		/* did we just enter a new frame? wipe the struct */
 		if (ds_buffer_pos == 0) {
-			memset(f, 0, sizeof(*f));
-		} else if (ds_buffer_pos >= 2*(offsetof(struct ds_frame_t, cmd)+sizeof(f->cmd))) {
+			memset(fr, 0, sizeof(*fr));
+		} else if (ds_buffer_pos >= 2*(offsetof(struct ds_frame_t, cmd)+sizeof(fr->cmd))) {
 			/* so we have the command type and know how big the payload should be;
 			 * if we alredy have enough nibbles/bytes, advance to the checksum
 			 */
-			if (2*(offsetof(struct ds_frame_t, data)+DS_CMD_PAYLOAD_SIZE(f->cmd)) == ds_buffer_pos) {
+			if (2*(offsetof(struct ds_frame_t, data)+DS_CMD_PAYLOAD_SIZE(fr->cmd)) == ds_buffer_pos) {
 				ds_buffer_pos = 2*(offsetof(struct ds_frame_t, chk));
 			}
 		}
@@ -66,10 +66,10 @@ static uint8_t decoder_complete(void) {
 	return (DS_FRAME_BUFFER_SIZE+ds_w_pos-ds_r_pos) % DS_FRAME_BUFFER_SIZE;
 }
 
-static uint8_t decoder_get_frame(struct ds_frame_t *f) {
+static uint8_t decoder_get_frame(struct ds_frame_t *fr) {
 	if (decoder_complete()) {
 		cli();
-		memcpy(f, &ds_buffer[ds_r_pos], sizeof(*f));
+		memcpy(fr, &ds_buffer[ds_r_pos], sizeof(*fr));
 		ds_r_pos = (ds_r_pos+1)%DS_FRAME_BUFFER_SIZE;
 		sei();
 		return 1;
@@ -78,10 +78,10 @@ static uint8_t decoder_get_frame(struct ds_frame_t *f) {
 	}
 }
 
-static uint8_t decoder_verify_frame(struct ds_frame_t *f) {
+static uint8_t decoder_verify_frame(struct ds_frame_t *fr) {
 	uint8_t sum = 0;
-	for (uint8_t i=0; i<sizeof(*f); i++) {
-		sum ^= ((uint8_t*)f)[i];
+	for (uint8_t i=0; i<sizeof(*fr); i++) {
+		sum ^= ((uint8_t*)fr)[i];
 	}
 	return (sum==0);
 }
@@ -128,14 +128,14 @@ static struct {
 	uint8_t up;
 } datenschlag_aux = {0,0,0};
 
-void datenschlag_process_aux(struct ds_frame_t *f) {
+void datenschlag_process_aux(struct ds_frame_t *fr) {
 /*
-	datenschlag_aux.mask   = f->data[0];
-	datenschlag_aux.active = f->data[1];
-	datenschlag_aux.up     = f->data[2];
+	datenschlag_aux.mask   = fr->data[0];
+	datenschlag_aux.active = fr->data[1];
+	datenschlag_aux.up     = fr->data[2];
 */
-	uint8_t a = f->data[0] & 0x0F;
-	uint8_t b = (f->data[0] & 0xF0)>>4;
+	uint8_t a = fr->data[0] & 0x0F;
+	uint8_t b = (fr->data[0] & 0xF0)>>4;
 	datenschlag_aux.mask   = (a | b);
 	datenschlag_aux.active = (    b);
 	datenschlag_aux.up     = (a & b);
