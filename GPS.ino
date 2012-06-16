@@ -196,7 +196,7 @@ void GPS_NewData() {
     if (_i2c_gps_status & I2C_GPS_STATUS_3DFIX) {                                     //Check is we have a good 3d fix (numsats>5)
        f.GPS_FIX = 1;
        
-       if (!f.ARMED)) { f.GPS_FIX_HOME = 0; }          // Clear home position when disarmed
+       if (!f.ARMED) { f.GPS_FIX_HOME = 0; }          // Clear home position when disarmed
        
        if (!f.GPS_FIX_HOME && f.ARMED) {        //if home is not set set home position to WP#0 and activate it
           GPS_I2C_command(I2C_GPS_COMMAND_SET_WP,0);      //Store current position to WP#0 (this is used for RTH)
