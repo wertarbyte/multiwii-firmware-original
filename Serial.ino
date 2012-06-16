@@ -57,9 +57,9 @@ static uint8_t cmdMSP;
 
 static uint32_t inline read32() {
   uint32_t t = read8();
-  t+= read8()<<8;
-  t+= read8()<<16;
-  t+= read8()<<24;
+  t |= (uint32_t)read8()<<8;
+  t |= (uint32_t)read8()<<16;
+  t |= (uint32_t)read8()<<24;
   return t;
 }
 
