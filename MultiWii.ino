@@ -109,23 +109,28 @@ static uint8_t  toggleBeep = 0;
 static int16_t  debug[4];
 static int16_t  sonarAlt; //to think about the unit
 
+#if defined(USE_BITFLAGS)
+  #define FLAG_DEF(n) uint8_t n : 1
+#else
+  #define FLAG_DEF(n) uint8_t n
+#endif
 struct flags_struct {
-  uint8_t OK_TO_ARM :1 ;
-  uint8_t ARMED :1 ;
-  uint8_t I2C_INIT_DONE :1 ; // For i2c gps we have to now when i2c init is done, so we can update parameters to the i2cgps from eeprom (at startup it is done in setup())
-  uint8_t ACC_CALIBRATED :1 ;
-  uint8_t NUNCHUKDATA :1 ;
-  uint8_t ACC_MODE :1 ;
-  uint8_t MAG_MODE :1 ;
-  uint8_t BARO_MODE :1 ;
-  uint8_t GPS_HOME_MODE :1 ;
-  uint8_t GPS_HOLD_MODE :1 ;
-  uint8_t HEADFREE_MODE :1 ;
-  uint8_t PASSTHRU_MODE :1 ;
-  uint8_t GPS_FIX :1 ;
-  uint8_t GPS_FIX_HOME :1 ;
-  uint8_t SMALL_ANGLES_25 :1 ;
-  uint8_t CALIBRATE_MAG :1 ;
+  FLAG_DEF( OK_TO_ARM ) ;
+  FLAG_DEF( ARMED ) ;
+  FLAG_DEF( I2C_INIT_DONE ) ; // For i2c gps we have to now when i2c init is done, so we can update parameters to the i2cgps from eeprom (at startup it is done in setup())
+  FLAG_DEF( ACC_CALIBRATED ) ;
+  FLAG_DEF( NUNCHUKDATA ) ;
+  FLAG_DEF( ACC_MODE ) ;
+  FLAG_DEF( MAG_MODE ) ;
+  FLAG_DEF( BARO_MODE ) ;
+  FLAG_DEF( GPS_HOME_MODE ) ;
+  FLAG_DEF( GPS_HOLD_MODE ) ;
+  FLAG_DEF( HEADFREE_MODE ) ;
+  FLAG_DEF( PASSTHRU_MODE ) ;
+  FLAG_DEF( GPS_FIX ) ;
+  FLAG_DEF( GPS_FIX_HOME ) ;
+  FLAG_DEF( SMALL_ANGLES_25 ) ;
+  FLAG_DEF( CALIBRATE_MAG ) ;
 } f;
 
 //for log
