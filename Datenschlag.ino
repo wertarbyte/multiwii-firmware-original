@@ -28,16 +28,16 @@ int32_t ds_frames_processed = 0;
 
 static void decoder_feed(uint8_t input) {
 	if (ds_buffer_pos < 2*sizeof(*ds_buffer)) {
-		struct ds_frame_t *f = &ds_buffer[ds_w_pos];
-		uint8_t *b = (uint8_t *) f;
+		struct ds_frame_t *fr = &ds_buffer[ds_w_pos];
+		uint8_t *b = (uint8_t *) fr;
 		/* did we just enter a new frame? wipe the struct */
 		if (ds_buffer_pos == 0) {
-			memset(f, 0, sizeof(*f));
-		} else if (ds_buffer_pos >= 2*(offsetof(struct ds_frame_t, cmd)+sizeof(f->cmd))) {
+			memset(fr, 0, sizeof(*fr));
+		} else if (ds_buffer_pos >= 2*(offsetof(struct ds_frame_t, cmd)+sizeof(fr->cmd))) {
 			/* so we have the command type and know how big the payload should be;
 			 * if we alredy have enough nibbles/bytes, advance to the checksum
 			 */
-			if (2*(offsetof(struct ds_frame_t, data)+DS_CMD_PAYLOAD_SIZE(f->cmd)) == ds_buffer_pos) {
+			if (2*(offsetof(struct ds_frame_t, data)+DS_CMD_PAYLOAD_SIZE(fr->cmd)) == ds_buffer_pos) {
 				ds_buffer_pos = 2*(offsetof(struct ds_frame_t, chk));
 			}
 		}
@@ -67,10 +67,10 @@ static uint8_t decoder_complete(void) {
 	return (DS_FRAME_BUFFER_SIZE+ds_w_pos-ds_r_pos) % DS_FRAME_BUFFER_SIZE;
 }
 
-static uint8_t decoder_get_frame(struct ds_frame_t *f) {
+static uint8_t decoder_get_frame(struct ds_frame_t *fr) {
 	if (decoder_complete()) {
 		cli();
-		memcpy(f, &ds_buffer[ds_r_pos], sizeof(*f));
+		memcpy(fr, &ds_buffer[ds_r_pos], sizeof(*fr));
 		ds_r_pos = (ds_r_pos+1)%DS_FRAME_BUFFER_SIZE;
 		sei();
 		return 1;
@@ -79,10 +79,10 @@ static uint8_t decoder_get_frame(struct ds_frame_t *f) {
 	}
 }
 
-static uint8_t decoder_verify_frame(struct ds_frame_t *f) {
+static uint8_t decoder_verify_frame(struct ds_frame_t *fr) {
 	uint8_t sum = 0;
-	for (uint8_t i=0; i<sizeof(*f); i++) {
-		sum ^= ((uint8_t*)f)[i];
+	for (uint8_t i=0; i<sizeof(*fr); i++) {
+		sum ^= ((uint8_t*)fr)[i];
 	}
 	return (sum==0);
 }
@@ -129,14 +129,14 @@ static struct {
 	uint8_t up;
 } datenschlag_aux = {0,0,0};
 
-void datenschlag_process_aux(struct ds_frame_t *f) {
+void datenschlag_process_aux(struct ds_frame_t *fr) {
 /*
-	datenschlag_aux.mask   = f->data[0];
-	datenschlag_aux.active = f->data[1];
-	datenschlag_aux.up     = f->data[2];
+	datenschlag_aux.mask   = fr->data[0];
+	datenschlag_aux.active = fr->data[1];
+	datenschlag_aux.up     = fr->data[2];
 */
-	uint8_t a = f->data[0] & 0x0F;
-	uint8_t b = (f->data[0] & 0xF0)>>4;
+	uint8_t a = fr->data[0] & 0x0F;
+	uint8_t b = (fr->data[0] & 0xF0)>>4;
 	datenschlag_aux.mask   = (a | b);
 	datenschlag_aux.active = (    b);
 	datenschlag_aux.up     = (a & b);
@@ -211,11 +211,11 @@ void datenschlag_process() {
 	while (decoder_get_frame(&frame)) {
 		if (! decoder_verify_frame(&frame)) {
 			ds_checksum_errors++;
-			debug2 = ds_checksum_errors;
+			debug[1] = ds_checksum_errors;
 			continue;
 		}
 		ds_frames_processed++;
-		debug1 = ds_frames_processed;
+		debug[0] = ds_frames_processed;
 
 		/* evaluate the received frames */
 		switch (frame.cmd) {
@@ -237,8 +237,8 @@ void datenschlag_process() {
 #endif
 			case (2<<5 | 0x0D): // 0x4D
 				/* debugging data, 2 bytes payload */
-				debug1 = frame.data[0];
-				debug2 = frame.data[1];
+				debug[0] = frame.data[0];
+				debug[1] = frame.data[1];
 				break;
 			case (1<<5 | 0x0A): // 0x2A
 				/* AUX channel switches, 1 byte payload */
@@ -246,8 +246,14 @@ void datenschlag_process() {
 				break;
 			case (2<<5 | 0x04): // 0x44
 				/* headfree adjustment, 2 byte payload */
-				headFreeModeHold = *(int16_t*) &frame.data;
+				headFreeModeHold = ((int16_t) frame.data[0])<<8 | frame.data[1];
 				break;
+#if defined(I2CAM_GIMBAL_SERVO)
+			case (1<<5 | 0x0C): //0x2C
+				/* camera gimbal adjustment of pitch axis */
+				gimbal_base_angle[PITCH] = (1800L*frame.data[0]/255)-900;;
+				break;
+#endif
 			default:
 				break;
 		}

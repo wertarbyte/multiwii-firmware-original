@@ -1381,4 +1381,3 @@
 #if defined(LCD_TELEMETRY_AUTO) && !(defined(LCD_TELEMETRY))
         #error "to use automatic telemetry, you MUST also define and configure LCD_TELEMETRY"
 #endif
-
