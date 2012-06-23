@@ -1116,6 +1116,10 @@ void mixTable() {
 }
 
 #ifdef I2CAM_GIMBAL_SERVO
+#ifndef I2CAM_ADDRESS
+  #define I2CAM_ADDRESS 0x4C
+#endif
+
 void set_i2cam_gimbal() {
   i2c_rep_start(I2CAM_ADDRESS<<1);  // I2C write direction
   i2c_write(3); // servo offset
