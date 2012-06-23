@@ -165,7 +165,7 @@ void evaluateCommand() {
      GPS_coord[LON] = read32();
      GPS_altitude = read16();
      GPS_speed = read16();
-     GPS_update |= 2; break;              // New data signalisation to GPS functions
+     GPS_update |= 2;              // New data signalisation to GPS functions
      headSerialReply(0);
      break;
    case MSP_SET_PID:
@@ -403,12 +403,15 @@ void serialize8(uint8_t a) {
 
 void UartSendData() {
   #if defined(PROMICRO)
-    #if !defined(TEENSY20)
-      USB_Send(USB_CDC_TX,bufTX,headTX);
-    #else
-      Serial.write(bufTX, headTX);
-    #endif
-    headTX = 0;
+    while(headTX != tailTX) {
+      if (++tailTX >= TX_BUFFER_SIZE) tailTX = 0;
+      uint8_t* p = bufTX+tailTX;
+      #if !defined(TEENSY20)
+        USB_Send(USB_CDC_TX,p,1);
+      #else
+        Serial.write(p,1);
+      #endif
+    }
   #endif
 }
 
@@ -495,7 +498,7 @@ uint8_t SerialAvailable(uint8_t port) {
     #if !defined(TEENSY20)
       if(port == 0) return USB_Available(USB_CDC_RX);
     #else
-      if(port == 0) return T_USB_Available(USB_CDC_RX);
+      if(port == 0) return T_USB_Available();
     #endif
     port = 0;
   #endif
