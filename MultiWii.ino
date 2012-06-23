@@ -910,7 +910,9 @@ void loop () {
       set_flag(FLAG_HEADFREE_MODE, 0);
     #endif
     #ifdef CAMTRIG_I2CAM
-      #define I2CAM_ADDRESS 0x4C
+      #ifndef I2CAM_ADDRESS
+        #define I2CAM_ADDRESS 0x4C
+      #endif
       #ifndef I2CAM_INTERVAL
         #define I2CAM_INTERVAL ((uint16_t)1000)
       #endif
