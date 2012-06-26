@@ -40,6 +40,7 @@ static uint8_t inBuf[INBUF_SIZE];
 #define MSP_PIDNAMES             117   //out message         the PID names
 #define MSP_WP                   118   //out message         get a WP, WP# is in the payload, returns (WP#, lat, lon, alt, flags) WP#0-home, WP#16-poshold
 #define MSP_HEADING              125   //out message         headings and MAG configuration
+#define MSP_AUX_COUNT            119   //out message         number of AUX channels
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -182,8 +183,8 @@ void evaluateCommand() {
      headSerialReply(0);
      break;
    case MSP_SET_BOX:
-     for(uint8_t i=0;i<CHECKBOXITEMS;i++) {
-       conf.activate[i]=read16();
+     for(uint8_t i=0;i<sizeof(conf.activate);i++) {
+       conf.activate[i]=read8();
      }
      headSerialReply(0);
      break;
@@ -304,9 +305,9 @@ void evaluateCommand() {
      }
      break;
    case MSP_BOX:
-     headSerialReply(2*CHECKBOXITEMS);
-     for(uint8_t i=0;i<CHECKBOXITEMS;i++) {
-       serialize16(conf.activate[i]);
+     headSerialReply(sizeof(conf.activate));
+     for(uint8_t i=0;i<sizeof(conf.activate);i++) {
+       serialize8(conf.activate[i]);
      }
      break;
    case MSP_BOXNAMES:
@@ -351,6 +352,10 @@ void evaluateCommand() {
      break;  
 #endif	 
 	 
+   case MSP_AUX_COUNT:
+     headSerialReply(1);
+     serialize8(AUX_CHANNELS);
+     break;
    case MSP_RESET_CONF:
      conf.checkNewConf++;
      checkFirstTime();

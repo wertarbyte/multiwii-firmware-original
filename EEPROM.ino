@@ -1,6 +1,7 @@
 #include <avr/eeprom.h>
+#include <string.h>
 
-#define EEPROM_CONF_VERSION 161
+#define EEPROM_CONF_VERSION 162
 
 void readEEPROM() {
   uint8_t i;
@@ -70,7 +71,7 @@ void checkFirstTime() {
   conf.yawRate = 0;
   conf.dynThrPID = 0;
   conf.thrMid8 = 50; conf.thrExpo8 = 0;
-  for(uint8_t i=0;i<CHECKBOXITEMS;i++) {conf.activate[i] = 0;}
+  memset(conf.activate, 0, sizeof(conf.activate));
   conf.angleTrim[0] = 0; conf.angleTrim[1] = 0;
   conf.powerTrigger1 = 0;
   #ifdef FLYING_WING
