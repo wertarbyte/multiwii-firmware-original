@@ -129,39 +129,25 @@ static struct {
 } datenschlag_aux = {0,0,0};
 
 void datenschlag_process_aux(struct ds_frame_t *fr) {
-/*
-	datenschlag_aux.mask   = fr->data[0];
-	datenschlag_aux.active = fr->data[1];
-	datenschlag_aux.up     = fr->data[2];
-*/
-	uint8_t a = fr->data[0] & 0x0F;
-	uint8_t b = (fr->data[0] & 0xF0)>>4;
+	uint8_t a = (fr->data[0] & 0x0F) | ((fr->data[1] & 0x0F)<<4);
+	uint8_t b = ((fr->data[0] & 0xF0)>>4) | ((fr->data[1] & 0xF0));
 	datenschlag_aux.mask   = (a | b);
 	datenschlag_aux.active = (    b);
 	datenschlag_aux.up     = (a & b);
 }
 
 void datenschlag_apply_aux(void) {
-	for (uint8_t i=0; i<4; i++) {
+#ifndef AUX_CHANNELS
+#define AUX_CHANNELS 4
+#define AUXN(i) (AUX1-1+(i))
+#endif
+	for (uint8_t i=0; i<AUX_CHANNELS && i<8; i++) {
 		if (!(datenschlag_aux.mask & 1<<i)) continue;
 		uint16_t v = 1500;
 		if (datenschlag_aux.active & 1<<i) {
 			v += ((datenschlag_aux.up & 1<<i) ? 500 : -500);
 		}
-		switch (i) {
-			case 0:
-				rcData[AUX1] = v;
-				break;
-			case 1:
-				rcData[AUX2] = v;
-				break;
-			case 2:
-				rcData[AUX3] = v;
-				break;
-			case 3:
-				rcData[AUX4] = v;
-				break;
-		}
+		rcData[AUXN(i+1)] = v;
 	}
 }
 
@@ -238,7 +224,8 @@ void datenschlag_process() {
 				debug2 = frame.data[1];
 				break;
 			case (1<<5 | 0x0A): // 0x2A
-				/* AUX channel switches, 1 byte payload */
+			case (2<<5 | 0x0A): // 0x4A
+				/* AUX channel switches, 1 or 2 byte payload */
 				datenschlag_process_aux(&frame);
 				break;
 			case (2<<5 | 0x04): // 0x44
