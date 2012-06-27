@@ -186,6 +186,13 @@ static uint16_t intPowerMeterSum, intPowerTrigger1;
 #define MINCHECK 1100
 #define MAXCHECK 1900
 
+#if !defined(AUX_THRESHOLDS)
+  #define AUX_THRESHOLDS {1300, 1700}
+#endif
+
+static const uint16_t aux_threshold[] = AUX_THRESHOLDS;
+#define AUX_STEPS (1+( sizeof(aux_threshold) / sizeof(*aux_threshold) ))
+
 static int16_t failsafeEvents = 0;
 volatile int16_t failsafeCnt = 0;
 
@@ -236,8 +243,8 @@ static struct {
   int16_t accZero[3];
   int16_t magZero[3];
   int16_t angleTrim[2];
-  /* we need 3 bits per AUX channel per item */
-  uint8_t activate[ (3*AUX_CHANNELS*CHECKBOXITEMS+7)/8 ];
+  /* we need AUX_STEPS bits per AUX channel per item */
+  uint8_t activate[ (AUX_STEPS*AUX_CHANNELS*CHECKBOXITEMS+7)/8 ];
   uint8_t powerTrigger1;
   #ifdef FLYING_WING
     uint16_t wing_left_mid;
@@ -255,14 +262,14 @@ static struct {
 } conf;
 
 uint8_t activated(uint8_t item, uint8_t channel, uint8_t state) {
-  uint16_t bnum = item*(AUX_CHANNELS*3) + channel*3 + state;
+  uint16_t bnum = item*(AUX_CHANNELS*AUX_STEPS) + channel*AUX_STEPS + state;
   uint8_t *field = &conf.activate[ bnum/8 ];
   return (*field & 1<<(bnum%8));
 }
 
 uint8_t can_be_activated(uint8_t item) {
   for (uint8_t i = 0; i<AUX_CHANNELS; i++) {
-    for (uint8_t j = 0; j<3; j++) {
+    for (uint8_t j = 0; j<AUX_STEPS; j++) {
       if (activated(item, i, j)) {
         return 1;
       }
@@ -870,12 +877,8 @@ void loop () {
     for(uint8_t c=0;c<AUX_CHANNELS;c++) {
       uint16_t val = rcData[AUX1+c];
       uint8_t state;
-      if (val < 1300) {
-        state = 0;
-      } else if (val > 1700) {
-        state = 2;
-      } else {
-        state = 1;
+      for (state = (AUX_STEPS-1); state>0; state--) {
+        if (aux_threshold[state-1] < val) break;
       }
       for(i=0;i<CHECKBOXITEMS;i++) {
         if (activated(i, c, state)) {
