@@ -464,6 +464,7 @@
   #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = -Y; accADC[PITCH]  =  X; accADC[YAW]  =  Z;}
   #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] = -X; gyroADC[PITCH] = -Y; gyroADC[YAW] = -Z;}
   #undef INTERNAL_I2C_PULLUPS
+  // move motor 7 & 8 to pin 4 & A2
   #define SOFT_PWM_3_PIN_HIGH        PORTD |= 1<<4;
   #define SOFT_PWM_3_PIN_LOW         PORTD &= ~(1<<4);
   #define SOFT_PWM_4_PIN_HIGH        PORTF |= 1<<5;
@@ -471,6 +472,20 @@
   #define SW_PWM_P3                  4        
   #define SW_PWM_P4                  A2
   #define HWPWM6
+  // move servo 3 & 4 to pin 12 & 11
+  #define SERVO_3_PINMODE   DDRD |= (1<<6); // 12
+  #define SERVO_3_PIN_HIGH  PORTD |= 1<<6;
+  #define SERVO_3_PIN_LOW   PORTD &= ~(1<<6);
+  #define SERVO_4_PINMODE   DDRB |= (1<<7); // 11
+  #define SERVO_4_PIN_HIGH  PORTB |= 1<<7;
+  #define SERVO_4_PIN_LOW   PORTB &= ~(1<<7);
+  // use pin 4 as status LED output if we have no octo
+  #if !defined(OCTOX8) && !defined(OCTOFLATP) && !defined(OCTOFLATX)
+    #define LEDPIN_PINMODE             DDRD |= (1<<4);            //D4 to output
+    #define LEDPIN_TOGGLE              PIND |= (1<<5)|(1<<4);     //switch LEDPIN state (Port D5) & pin D4
+    #define LEDPIN_OFF                 PORTD |= (1<<5); PORTD &= ~(1<<4);
+    #define LEDPIN_ON                  PORTD &= ~(1<<5); PORTD |= (1<<4);  
+  #endif
 #endif
 
 #if defined(PIPO)
@@ -926,7 +941,7 @@
   #define MULTITYPE 12   //12  for MultiWinGui
 #elif defined(OCTOFLATX)
   #define MULTITYPE 13   //13  for MultiWinGui 
-#elif defined(AIRPLANE)    
+#elif defined(AIRPLANE)|| defined(SINGLECOPTER)|| defined(DUALCOPTER)    
   #define MULTITYPE 14    
 #elif defined (HELI_120_CCPM)   
   #define MULTITYPE 15      
@@ -939,11 +954,11 @@
 /**************************************************************************************/
 /***************          Some unsorted "chain" defines            ********************/
 /**************************************************************************************/
-#if defined (AIRPLANE) || defined(FLYING_WING)
+#if defined (AIRPLANE) || defined(FLYING_WING)|| defined(SINGLECOPTER)|| defined(DUALCOPTER)
   #define FIXEDWING
 #endif
 
-#if defined (AIRPLANE) || defined(HELICOPTER) && defined(PROMINI) 
+#if defined (AIRPLANE) || defined(HELICOPTER)|| defined(SINGLECOPTER)|| defined(DUALCOPTER) && defined(PROMINI) 
   #if defined(D12_POWER)
     #define SERVO_4_PINMODE            ;  // D12
     #define SERVO_4_PIN_HIGH           ;
@@ -988,7 +1003,7 @@
 /**************************************************************************************/
 /***************             motor and servo numbers               ********************/
 /**************************************************************************************/
-#if defined(BI) || defined(TRI) || defined(SERVO_TILT) || defined(GIMBAL) || defined(FLYING_WING) || defined(AIRPLANE) || defined(CAMTRIG) || defined(HELICOPTER) || defined(SERVO_MIX_TILT)
+#if defined(BI) || defined(TRI) || defined(SERVO_TILT) || defined(GIMBAL) || defined(FLYING_WING) || defined(AIRPLANE) || defined(CAMTRIG) || defined(HELICOPTER) || defined(SERVO_MIX_TILT)|| defined(SINGLECOPTER)|| defined(DUALCOPTER)
   #define SERVO
 #endif
 
@@ -1000,6 +1015,16 @@
   #define NUMBER_MOTOR     1
   #define PRI_SERVO_FROM   1 // use servo from 1 to 2
   #define PRI_SERVO_TO     2
+  
+#elif defined(SINGLECOPTER)
+  #define NUMBER_MOTOR     1
+  #define PRI_SERVO_FROM   4 // use servo from 4 to 7
+  #define PRI_SERVO_TO     7
+#elif defined(DUALCOPTER)
+  #define NUMBER_MOTOR     2
+  #define PRI_SERVO_FROM   4 // use servo from 5 to 6
+  #define PRI_SERVO_TO     6
+  
 #elif defined(AIRPLANE)
   #define NUMBER_MOTOR     0
     #if defined(FLAPS) 
@@ -1024,9 +1049,15 @@
 #elif defined(OCTOX8) || defined(OCTOFLATP) || defined(OCTOFLATX)
   #define NUMBER_MOTOR     8
 #elif defined(HELICOPTER)
-  #define NUMBER_MOTOR     0
-  #define PRI_SERVO_FROM   4 // use servo from 4 to 8
-  #define PRI_SERVO_TO     8
+  #ifdef HELI_USE_SERVO_FOR_THROTTLE
+    #define NUMBER_MOTOR     0 // use servo to drive throttle output
+    #define PRI_SERVO_FROM   4 // use servo from 4 to 8
+    #define PRI_SERVO_TO     8
+  #else
+    #define NUMBER_MOTOR     1 // use 1 motor for throttle
+    #define PRI_SERVO_FROM   4 // use servo from 4 to 7
+    #define PRI_SERVO_TO     7
+  #endif
 #endif
 
 
@@ -1040,8 +1071,10 @@
       #define SEC_SERVO_FROM   3 // use servo from 3 to 4
       #define SEC_SERVO_TO     4
     #else
-      #define SEC_SERVO_FROM   1 // use servo from 1 to 2
-      #define SEC_SERVO_TO     2
+      #if !defined(MEGA_HW_GIMBAL) // if HW Gimbal is active we dont need the SW PWM defines
+        #define SEC_SERVO_FROM   1 // use servo from 1 to 2
+        #define SEC_SERVO_TO     2
+      #endif
     #endif
   #endif
   #if defined(CAMTRIG)
@@ -1380,4 +1413,8 @@
 
 #if defined(LCD_TELEMETRY_AUTO) && !(defined(LCD_TELEMETRY))
         #error "to use automatic telemetry, you MUST also define and configure LCD_TELEMETRY"
+#endif
+
+#if defined(LCD_TELEMETRY_STEP) && !(defined(LCD_TELEMETRY))
+        #error "to use single step telemetry, you MUST also define and configure LCD_TELEMETRY"
 #endif

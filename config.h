@@ -35,6 +35,8 @@
     //#define FLYING_WING
     //#define VTAIL4
     //#define AIRPLANE     // Howto setup =>>>http://fotoflygarn.blogspot.com/2012/03/how-to-setup-multiwii-airplane-same.html
+    //#define SINGLECOPTER // http://www.youtube.com/watch?v=pKFygrGKSUQ
+    //#define DUALCOPTER   // request from  xuant9 Function must be confirmed.
     //*******************************************************
     // Heli is  beta test ......!
     // Howto setup =>>> http://fotoflygarn.blogspot.se/2012/04/multiwii-helicopter.html
@@ -272,7 +274,22 @@
     // Limit Maximum controll for Roll & Nick  in 0-100%
     #define CONTROLL_RANGE   { 100, 100 }      //  { ROLL,PITCH }
 
-
+    // use servo code to drive the throttle output. You want this for analog servo driving the throttle on IC engines.
+    // if inactive, throttle output will be treated as a motor output, so it can drive an ESC
+    //#define HELI_USE_SERVO_FOR_THROTTLE
+    
+  //*************************** !!!!  Single and DualCopter Settings  !!!!*************************//
+    // Change to -1 to reverse servomovement per axis
+    
+    // Servosettings for SingleCopter....    
+    #define SINGLECOPTRER_YAW   {1, 1, 1, 1} // Left, Right,Front,Rear
+    #define SINGLECOPTRER_SERVO {1,-1, 1,-1} // Pitch,Pitch,Roll, Roll    
+  
+    // Servosettings for DualCopter.....
+     #define DUALCOPTER_SERVO {1,1} //Pitch,Roll
+    
+    // Use  SERVO_OFFSET and SERVO_RATES in Heli and Airplane section for centering and endpoints.
+    
 /*************************************************************************************************/
 /*****************                                                                 ***************/
 /****************  SECTION  3 - ALTERNATE CPUs & BOARDS                                    *******/
@@ -450,11 +467,16 @@
   /**************************************************************************************/
   /********          special ESC (wii-ESC) with extended range       ********************/
   /**************************************************************************************/
-//#define MINCOMMAND 1000
-//#define MINTHROTTLE 1080
-//#define MAXTHROTTLE 2000
-//#define EXT_MOTOR_RANGE
+  //#define MINCOMMAND 1000
+  //#define MINTHROTTLE 1080
+  //#define MAXTHROTTLE 2000
+  //#define EXT_MOTOR_RANGE
 
+  /**************************************************************************************/
+  /********          special ESC (simonk) with extended range        ********************/
+  /**************************************************************************************/
+  //#define MINTHROTTLE 1064
+  //#define MAXTHROTTLE 1864
 
 /*************************************************************************************************/
 /*****************                                                                 ***************/
@@ -573,6 +595,9 @@
     /* GPS data readed from OSD -- still need some more code to work */
     //#define GPS_FROM_OSD
 
+	//#define USE_MSP_WP           //Enables the MSP_WP command, which is used by WinGUI to display and log Home and Poshold positions
+                                   //Uncomment it if you are planning to use WinGUI - Will cost +208 bytes of Flash
+	
     /* GPS navigation can control the heading */
     
     #define NAV_CONTROLS_HEADING       true      // copter faces toward the navigation point, maghold must be enabled for it
@@ -584,8 +609,8 @@
     //Convert the degree+minutes into decimal degree by ==> degree+minutes*(1/60)
     //Note the sign on declination it could be negative or positive (WEST or EAST)
     
-    #define GPS_FILTERING              true      // add a 5 element moving average filter to GPS coordinates, helps eliminate gps noise but adds latency
-    #define GPS_LOW_SPEED_D_FILTER     true      // below .5m/s speed ignore D term for POSHOLD_RATE, theoretically this also removed D term induced noise
+    #define GPS_FILTERING                    // add a 5 element moving average filter to GPS coordinates, helps eliminate gps noise but adds latency comment out to disable
+    #define GPS_LOW_SPEED_D_FILTER           // below .5m/s speed ignore D term for POSHOLD_RATE, theoretically this also removed D term induced noise commnent out to disable
     #define GPS_WP_RADIUS              200       // if we are within this distance to a waypoint then we consider it reached (distance is in cm)
     #define NAV_SLEW_RATE              30        // Adds a rate control to nav output, will smoothen out nav angle spikes
 
@@ -630,6 +655,9 @@
       #define LCD_VALUE_UP 'd'
       #define LCD_VALUE_DOWN 'b'
 
+      #define LCD_MENU_SAVE_EXIT 's'
+      #define LCD_MENU_ABORT 'x'
+
     /* To use an LCD03 for configuration:
        http://www.robot-electronics.co.uk/htm/Lcd03tech.htm
        Remove the jumper on its back to set i2c control.
@@ -671,6 +699,10 @@
     /* multiline displays support pages 1-5 */
     //#define LCD_TELEMETRY_AUTO "123452679" // pages 1 to 7 in ascending order
     //#define LCD_TELEMETRY_AUTO  "212232425262729" // strong emphasis on page 2
+
+    // same as above, but manual stepping sequence; requires stick input for each stepping
+    //#define LCD_TELEMETRY_STEP "0123456789" // must begin with 0
+
 
     /* on telemetry page B (2) it gives a bar graph which shows how much voltage battery has left. Range from 0 to 12 Volt is not very informative */
     /* so we try do define a meaningful range. For a 3S battery we define full=12,6V and calculate how much it is above first warning level */
@@ -777,11 +809,15 @@
 
     /* this is the value for the ESCs when they are not armed
        in some cases, this value must be lowered down to 900 for some specific ESCs */
-    #define MINCOMMAND 1000
+    #ifndef MINCOMMAND
+      #define MINCOMMAND 1000
+    #endif
 
     /* this is the maximum value for the ESCs at full power
        this value can be increased up to 2000 */
-    #define MAXTHROTTLE 1850
+    #ifndef MAXTHROTTLE
+      #define MAXTHROTTLE 1850
+    #endif
 
   /**************************************************************************************/
   /***********************     motor, servo and other presets     ***********************/
@@ -806,6 +842,14 @@
        for use with digital servos
        dont use it with analog servos! thay may get damage. (some will work but be careful)*/
     //#define SERVO_RFR_300HZ
+    
+  /***********************             HW PWM Servos             ***********************/ 
+    /* HW PWM Gimbal for Arduino Mega.. moves:*/
+    //Pitch = pin 44
+    //Roll  = pin 45
+    // this reduces the PWM resolution for all other servos to 8 bit
+
+    //#define MEGA_HW_GIMBAL
 
   /********************************************************************/
   /****           IMU complimentary filter tuning                  ****/

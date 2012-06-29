@@ -12,8 +12,9 @@ March  2012     V2.0
 
 #include "config.h"
 #include "def.h"
+
 #include <avr/pgmspace.h>
-#define  VERSION  201
+#define  VERSION  202
 
 
 /*********** RC alias *****************/
@@ -172,11 +173,10 @@ static uint16_t intPowerMeterSum, intPowerTrigger1;
 // **********************
 // telemetry
 // **********************
-#if defined(LCD_TELEMETRY) || defined(LCD_TELEMETRY_AUTO) || defined(LCD_TELEMETRY_DEBUG)
+#if defined(LCD_TELEMETRY)
 static uint8_t telemetry = 0;
 static uint8_t telemetry_auto = 0;
 #endif
-
 // ******************
 // rc functions
 // ******************
@@ -242,7 +242,7 @@ static struct {
   #ifdef TRI
     uint16_t tri_yaw_middle;
   #endif
-  #if defined HELICOPTER || defined(AIRPLANE)
+  #if defined HELICOPTER || defined(AIRPLANE)|| defined(SINGLECOPTER)|| defined(DUALCOPTER)
     int16_t servoTrim[8];
   #endif
   #if defined(GYRO_SMOOTHING)
@@ -655,6 +655,10 @@ void loop () {
   static int16_t errorAngleI[2] = {0,0};
   static uint32_t rcTime  = 0;
   static int16_t initialThrottleHold;
+  #ifdef LCD_TELEMETRY_STEP
+  static char telemetryStepSequence []  = LCD_TELEMETRY_STEP;
+  static uint8_t telemetryStepIndex = 0;
+  #endif
 
   #if defined(SPEKTRUM)
     if (rcFrameComplete) computeRC();
@@ -783,7 +787,14 @@ void loop () {
            } else
               telemetry_auto = 1;
         }
-     #endif
+      #endif
+      #ifdef LCD_TELEMETRY_STEP
+      } else if (rcData[ROLL] > MAXCHECK && rcData[PITCH] > MAXCHECK && !f.ARMED) {
+        if (rcDelayCommand == 20) {
+          telemetry = telemetryStepSequence[++telemetryStepIndex % strlen(telemetryStepSequence)];
+          LCDclear(); // make sure to clear away remnants
+        }
+      #endif
       } else
         rcDelayCommand = 0;
     } else if (rcData[THROTTLE] > MAXCHECK && !f.ARMED) {
@@ -836,13 +847,12 @@ void loop () {
       }
     #endif
 
-    for(i=0;i<CHECKBOXITEMS;i++) {   
-      rcOptions[i] = (
-       ((rcData[AUX1]<1300)    | (1300<rcData[AUX1] && rcData[AUX1]<1700)<<1 | (rcData[AUX1]>1700)<<2
-       |(rcData[AUX2]<1300)<<3 | (1300<rcData[AUX2] && rcData[AUX2]<1700)<<4 | (rcData[AUX2]>1700)<<5
-       |(rcData[AUX3]<1300)<<6 | (1300<rcData[AUX3] && rcData[AUX3]<1700)<<7 | (rcData[AUX3]>1700)<<8
-       |(rcData[AUX4]<1300)<<9 | (1300<rcData[AUX4] && rcData[AUX4]<1700)<<10| (rcData[AUX4]>1700)<<11) & conf.activate[i])>0;
-    }
+    uint16_t auxState = (rcData[AUX1]<1300)    | (1300<rcData[AUX1] && rcData[AUX1]<1700)<<1 | (rcData[AUX1]>1700)<<2
+                       |(rcData[AUX2]<1300)<<3 | (1300<rcData[AUX2] && rcData[AUX2]<1700)<<4 | (rcData[AUX2]>1700)<<5
+                       |(rcData[AUX3]<1300)<<6 | (1300<rcData[AUX3] && rcData[AUX3]<1700)<<7 | (rcData[AUX3]>1700)<<8
+                       |(rcData[AUX4]<1300)<<9 | (1300<rcData[AUX4] && rcData[AUX4]<1700)<<10| (rcData[AUX4]>1700)<<11;
+    for(i=0;i<CHECKBOXITEMS;i++)
+      rcOptions[i] = (auxState & conf.activate[i])>0;
 
     #ifdef DATENSCHLAG_CHANNEL
     /* apply flight assistance settings from Datenschlag data link */
