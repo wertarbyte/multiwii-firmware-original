@@ -1,4 +1,38 @@
 /**************************************************************************************/
+/***************             test configurations                   ********************/
+/**************************************************************************************/
+#if COPTERTEST == 1
+  #define QUADP
+  #define WMP
+#elif COPTERTEST == 2
+  #define FLYING_WING
+  #define WMP
+  #define BMA020
+  #define FAILSAFE
+  #define LCD_CONF
+  #define LCD_TEXTSTAR
+#elif COPTERTEST == 3
+  #define TRI
+  #define FREEIMUv035_MS
+  #define BUZZER
+  #define VBAT
+  #define POWERMETER_HARD
+  #define LCD_CONF
+  #define LCD_VT100
+  #define LCD_TELEMETRY
+  #define LCD_TELEMETRY_STEP "01245"
+#elif COPTERTEST == 4
+  #define QUADX
+  #define CRIUS_SE
+  #define SPEKTRUM 2048
+  #define LED_RING
+  #define GPS_SERIAL 2
+#elif defined(COPTERTEST)
+  #error "*** this test is not yet defined"
+#endif
+
+
+/**************************************************************************************/
 /***************             Proc specific definitions             ********************/
 /**************************************************************************************/
 // Proc auto detection
@@ -767,6 +801,19 @@
   #undef INTERNAL_I2C_PULLUPS
 #endif
 
+#if defined(PROTO_DIY)
+  #define ITG3200
+  #define BMA180
+  #define HMC5883
+  #define MS561101BA
+  #define ACC_ORIENTATION(X, Y, Z)  {accADC[ROLL]  = X; accADC[PITCH]  = Y; accADC[YAW]  = Z;}
+  #define GYRO_ORIENTATION(X, Y, Z) {gyroADC[ROLL] = X; gyroADC[PITCH] = Y; gyroADC[YAW] = -Z;}
+  #define MAG_ORIENTATION(X, Y, Z)  {magADC[ROLL]  = X; magADC[PITCH]  = Y; magADC[YAW]  = -Z;}
+  #undef INTERNAL_I2C_PULLUPS
+  #define STABLEPIN_ON               PORTC &= ~(1<<6);
+  #define STABLEPIN_OFF              PORTC |= 1<<6;
+#endif
+
 #if defined(IOI_MINI_MULTIWII)
   #define ITG3200
   #define BMA180
@@ -1399,6 +1446,10 @@
   #endif
 #endif
 
+#if !defined(ALT_HOLD_THROTTLE_NEUTRAL_ZONE)
+  #define ALT_HOLD_THROTTLE_NEUTRAL_ZONE 20
+#endif 
+
 /**************************************************************************************/
 /***************               Error Checking Section              ********************/
 /**************************************************************************************/
@@ -1417,4 +1468,8 @@
 
 #if defined(LCD_TELEMETRY_STEP) && !(defined(LCD_TELEMETRY))
         #error "to use single step telemetry, you MUST also define and configure LCD_TELEMETRY"
+#endif
+
+#if defined(VBAT) && !(defined(BUZZER))
+        #error "to use VBAT, you must also configure BUZZER"
 #endif

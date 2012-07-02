@@ -20,7 +20,7 @@ unsigned char CHAR_FORMAT = 0;      // use to INVERSE characters
 // use INVERSE    CHAR_FORMAT = 0b01111111;
 // use NORMAL     CHAR_FORMAT = 0;
 static char buffer; // buffer to read bytes from ROM, using pgm_read_byte macro. NB! avr/pgmspace.h must be included prog_uchar LOGO[] PROGMEM = {  // My first attempt to flash a logo....
-prog_uchar LOGO[] PROGMEM = { // logo....
+const uint8_t PROGMEM LOGO[] = { // logo....
     0x00, 0x00, 0x02, 0xFE, 0xFE, 0x0E, 0xFC, 0xF8, 0xC0, 0x00, 0xC0, 0xF8, 0xFC, 0x0E, 0xFE, 0xFE,
     0xFE, 0x02, 0x00, 0x00, 0x30, 0xF0, 0xF0, 0x00, 0x00, 0x00, 0x30, 0xF0, 0xF0, 0x00, 0x00, 0x00,
     0x02, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x30, 0xF8, 0xFE, 0x30, 0x30, 0x30, 0x00, 0x00, 0x30, 0xF6,
@@ -88,7 +88,7 @@ prog_uchar LOGO[] PROGMEM = { // logo....
 
 };
 
-prog_uchar myFont[][6] PROGMEM = { // Refer to "Times New Roman" Font Database... 5 x 7 font
+const uint8_t PROGMEM myFont[][6] = { // Refer to "Times New Roman" Font Database... 5 x 7 font
   { 0x00,0x00,0x00,0x00,0x00,0x00},
   { 0x00,0x00,0x4F,0x00,0x00,0x00}, //   (  1)  ! - 0x0021 Exclamation Mark
   { 0x00,0x07,0x00,0x07,0x00,0x00}, //   (  2)  " - 0x0022 Quotation Mark
@@ -826,14 +826,14 @@ const char PROGMEM lcd_param_text86 [] = "ServoMid 6";
 const char PROGMEM lcd_param_text87 [] = "ServoMid 7";
 #endif
 #if GPS
-PROGMEM prog_char lcd_param_text91 [] = "GPS Pos. P";
-PROGMEM prog_char lcd_param_text92 [] = "GPS Pos. I";
-PROGMEM prog_char lcd_param_text93 [] = "Pos Rate P";
-PROGMEM prog_char lcd_param_text94 [] = "Pos Rate I";
-PROGMEM prog_char lcd_param_text95 [] = "Pos Rate D";
-PROGMEM prog_char lcd_param_text96 [] = "NAV Rate P";
-PROGMEM prog_char lcd_param_text97 [] = "NAV Rate I";
-PROGMEM prog_char lcd_param_text98 [] = "NAV Rate D";
+const char PROGMEM lcd_param_text91 [] = "GPS Pos. P";
+const char PROGMEM lcd_param_text92 [] = "GPS Pos. I";
+const char PROGMEM lcd_param_text93 [] = "Pos Rate P";
+const char PROGMEM lcd_param_text94 [] = "Pos Rate I";
+const char PROGMEM lcd_param_text95 [] = "Pos Rate D";
+const char PROGMEM lcd_param_text96 [] = "NAV Rate P";
+const char PROGMEM lcd_param_text97 [] = "NAV Rate I";
+const char PROGMEM lcd_param_text98 [] = "NAV Rate D";
 #endif
 
 //                                       0123456789.12345
@@ -1667,10 +1667,8 @@ void lcd_telemetry() {
 #if BARO
       int16_t h = (BaroAlt - BAROaltStart) / 100;
       LCDprint('A'); lcdprint_int16(h); LCDprint('m');
-#ifdef LOG_VALUES
       h = (BAROaltMax - BAROaltStart) / 100;
       LCDprintChar(" ("); lcdprint_int16(h);
-#endif
 #endif
       break;
     }
