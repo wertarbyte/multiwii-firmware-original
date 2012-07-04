@@ -32,7 +32,6 @@ March  2012     V2.0
 #define AUX8       11
 #define AUXN(n)    ((AUX1)-1+(n))
 
-#define AUX_CHANNELS 8
 
 #define PIDALT     3
 #define PIDPOS     4
@@ -186,7 +185,11 @@ static uint16_t intPowerMeterSum, intPowerTrigger1;
 #define MINCHECK 1100
 #define MAXCHECK 1900
 
-#if !defined(AUX_THRESHOLDS)
+#ifndef AUX_CHANNELS
+  #define AUX_CHANNELS 4
+#endif
+
+#ifndef AUX_THRESHOLDS
   #define AUX_THRESHOLDS {1300, 1700}
 #endif
 

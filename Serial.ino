@@ -41,6 +41,7 @@ static uint8_t inBuf[INBUF_SIZE];
 #define MSP_WP                   118   //out message         get a WP, WP# is in the payload, returns (WP#, lat, lon, alt, flags) WP#0-home, WP#16-poshold
 #define MSP_HEADING              125   //out message         headings and MAG configuration
 #define MSP_AUX_COUNT            119   //out message         number of AUX channels
+#define MSP_AUX                  120   //out message         get configuration of boxitems and AUX channels
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -52,6 +53,7 @@ static uint8_t inBuf[INBUF_SIZE];
 #define MSP_SET_MISC             207   //in message          powermeter trig + 8 free for future use
 #define MSP_RESET_CONF           208   //in message          no param
 #define MSP_WP_SET               209   //in message          sets a given WP (WP#,lat, lon, alt, flags)
+#define MSP_SET_AUX              210   //in message          set configuration of AUX channels and boxitems
 
 #define MSP_EEPROM_WRITE         250   //in message          no param
 
@@ -154,6 +156,16 @@ void serialCom() {
   }
 }
 
+static void setBoxitem(uint8_t item, uint8_t channel, uint8_t state, uint8_t on) {
+  uint16_t bnum = item*(AUX_CHANNELS*3) + channel*3 + state;
+  uint8_t *field = &conf.activate[ bnum/8 ];
+  if (on) {
+    *field |= 1<<(bnum%8);
+  } else {
+    *field &= ~(1<<(bnum%8));
+  }
+}
+
 void evaluateCommand() {
   switch(cmdMSP) {
    case MSP_SET_RAW_RC:
@@ -182,12 +194,37 @@ void evaluateCommand() {
      }
      headSerialReply(0);
      break;
+
+   #if (AUX_CHANNELS == 4) // we cannot check for AUX_STEPS == 3 here :(
+   // traditional way of setting box items, superseeded by MSP_SET_AUX
    case MSP_SET_BOX:
+     // we cannot handle non-traditional numbers here
+     if (AUX_CHANNELS == 4 && AUX_STEPS == 3) {
+       // clear current settings
+       memset(&conf.activate, 0, sizeof(conf.activate));
+       for(uint8_t i=0;i<CHECKBOXITEMS;i++) {
+         uint16_t act_i = read16();
+         // now flip the appropiate bits
+         for(uint8_t c=0;c<AUX_CHANNELS;c++) {
+           for (uint8_t s=0; s<AUX_STEPS; s++) {
+             setBoxitem(i, c, s, (act_i & 1<<(c*AUX_STEPS + s)));
+           }
+         }
+       }
+     } else {
+       // indicate that we cannot handle this instruction
+       goto MSP_ERR_DEFAULT;
+     }
+     break;
+   #endif
+
+   case MSP_SET_AUX:
      for(uint8_t i=0;i<sizeof(conf.activate);i++) {
        conf.activate[i]=read8();
      }
      headSerialReply(0);
      break;
+
    case MSP_SET_RC_TUNING:
      conf.rcRate8 = read8();
      conf.rcExpo8 = read8();
@@ -304,7 +341,32 @@ void evaluateCommand() {
        serialize8(conf.D8[i]);
      }
      break;
+
+   #if (AUX_CHANNELS == 4) // we cannot check for AUX_STEPS == 3 here :(
    case MSP_BOX:
+     // we cannot handle non-traditional numbers here
+     if (AUX_CHANNELS == 4 && AUX_STEPS == 3) {
+       headSerialReply(CHECKBOXITEMS*2);
+       for(uint8_t i=0;i<CHECKBOXITEMS;i++) {
+         uint16_t act_i = 0;
+         // now flip the appropiate bits
+         for(uint8_t c=0;c<AUX_CHANNELS;c++) {
+           for (uint8_t s=0; s<AUX_STEPS; s++) {
+             if (activated(i, c, s)) {
+               act_i |= (1<<(c*AUX_STEPS + s));
+             }
+           }
+         }
+         serialize16(act_i);
+       }
+     } else {
+       // indicate that we cannot handle this instruction
+       goto MSP_ERR_DEFAULT;
+     }
+     break;
+   #endif
+
+   case MSP_AUX:
      headSerialReply(sizeof(conf.activate));
      for(uint8_t i=0;i<sizeof(conf.activate);i++) {
        serialize8(conf.activate[i]);
@@ -381,6 +443,7 @@ void evaluateCommand() {
      }
      break;
    default:  // we do not know how to handle the (valid) message, indicate error MSP $M!
+   MSP_ERR_DEFAULT:
      headSerialError(0);
      break;
   }

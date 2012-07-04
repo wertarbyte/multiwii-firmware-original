@@ -541,6 +541,11 @@
        +/-20 uncommend and change the value below if you want to change it. */
     //#define ALT_HOLD_THROTTLE_NEUTRAL_ZONE 20 
 
+    /* use custom number of AUX channels */
+    //#define AUX_CHANNELS 4
+
+    /* use custom number of AUX steps or thresholds */
+    //define AUX_THRESHOLDS {1300, 1700}
 
   /**************************************************************************************/
   /***********************                  GPS                **************************/
