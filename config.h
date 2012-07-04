@@ -326,7 +326,8 @@
     /******************* RC signal from the serial port via Multiwii Serial Protocol *********/
       //#define RCSERIAL
 
-
+    /******* use Datenschlag framework to encode/decode binary data via AUX channel *******/
+      //#define DATENSCHLAG_CHANNEL AUX2
 
 
 /*************************************************************************************************/
@@ -463,9 +464,6 @@
       //#define MMSERVOGIMBALVECTORLENGHT 32   // Lenght of Moving Average Vector
 
 
-
-    /******* use Datenschlag framework to encode/decode binary data via AUX channel *******/
-      //#define DATENSCHLAG_CHANNEL AUX2
 
 /*************************************************************************************************/
 /*****************                                                                 ***************/
