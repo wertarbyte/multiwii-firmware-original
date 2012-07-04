@@ -621,15 +621,14 @@ void loop () {
   #endif 
 
   #if defined(DATENSCHLAG_CHANNEL)
-    #define RC_FREQ 100
-  #else
-    #define RC_FREQ 50
-  #endif
-  if (currentTime > rcTime ) { // >50Hz
-    rcTime = currentTime + (1000000L/RC_FREQ);
-    #if defined(DATENSCHLAG_CHANNEL)
+    static uint32_t dsTime  = 0;
+    if (currentTime > dsTime ) { // 100Hz
+      dsTime = currentTime + 10000;
       datenschlag_feed(readRawRC(DATENSCHLAG_CHANNEL));
-    #endif
+    }
+  #endif
+  if (currentTime > rcTime ) { // 50Hz
+    rcTime = currentTime + (1000000L/RC_FREQ);
     computeRC();
     #if defined(DATENSCHLAG_CHANNEL)
       datenschlag_apply_aux();
