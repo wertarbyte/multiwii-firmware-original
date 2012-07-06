@@ -635,6 +635,8 @@ void setup() {
     led_flasher_set_sequence(LED_FLASHER_SEQUENCE);
   #endif
   f.SMALL_ANGLES_25=1; // important for gyro only conf
+
+  debugmsg_append_str("initialization completed\n");
 }
 
 // ******** Main Loop *********
