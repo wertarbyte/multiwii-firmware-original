@@ -1,7 +1,7 @@
 /*
 MultiWiiCopter by Alexandre Dubus
 www.multiwii.com
-March  2012     V2.0
+July  2012     V2.1
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -14,7 +14,7 @@ March  2012     V2.0
 #include "def.h"
 
 #include <avr/pgmspace.h>
-#define  VERSION  202
+#define  VERSION  210
 
 
 /*********** RC alias *****************/
@@ -103,6 +103,10 @@ static int16_t  errorAltitudeI = 0;
 #if defined(BUZZER)
   static uint8_t  toggleBeep = 0;
 #endif
+#if defined(ARMEDTIMEWARNING)
+  static uint32_t  ArmedTimeWarningMicroSeconds = 0;
+#endif
+
 static int16_t  debug[4];
 static int16_t  sonarAlt; //to think about the unit
 
@@ -556,18 +560,6 @@ void setup() {
   BUZZERPIN_PINMODE;
   STABLEPIN_PINMODE;
   POWERPIN_OFF;
-  #if defined(ESC_CALIB_CANNOT_FLY) // <- to move in Output.pde, nothing to do here
-    /* this turns into a special version of MultiWii. Its only purpose it to try and calib all attached ESCs */
-    writeAllMotors(ESC_CALIB_HIGH);
-    delay(3000);
-    writeAllMotors(ESC_CALIB_LOW);
-    delay(500);
-    while (1) {
-      delay(5000);
-      blinkLED(2,20, 2);
-    }
-    exit; // statement never reached
-  #endif
   initOutput();
   readEEPROM();
   checkFirstTime();
@@ -587,6 +579,9 @@ void setup() {
   #if defined(POWERMETER)
     for(uint8_t i=0;i<=PMOTOR_SUM;i++)
       pMeter[i]=0;
+  #endif
+  #if defined(ARMEDTIMEWARNING)
+    ArmedTimeWarningMicroSeconds = (ARMEDTIMEWARNING *1000000);
   #endif
   /************************************/
   #if defined(GPS_SERIAL)
@@ -750,7 +745,7 @@ void loop () {
       else if (conf.activate[BOXARM] > 0) {
         if ( rcOptions[BOXARM] && f.OK_TO_ARM
         #if defined(FAILSAFE)
-          && failsafeCnt == 0
+          && failsafeCnt <= 1
         #endif 
         ) {
 	  f.ARMED = 1;

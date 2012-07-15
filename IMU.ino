@@ -95,21 +95,17 @@ void computeIMU () {
 /* Set the Low Pass Filter factor for Magnetometer */
 /* Increasing this value would reduce Magnetometer noise (not visible in GUI), but would increase Magnetometer lag time*/
 /* Comment this if  you do not want filter at all.*/
-/* Default WMC value: n/a*/
 #ifndef MG_LPF_FACTOR
-//#define MG_LPF_FACTOR 4
+  //#define MG_LPF_FACTOR 4
 #endif
 
 /* Set the Gyro Weight for Gyro/Acc complementary filter */
-/* Increasing this value would reduce and delay Acc influence on the output of the filter*/
-/* Default WMC value: 300*/
-#ifndef GYR_CMPF_FACTOR
+/* Increasing this value would reduce and delay Acc influence on the output of the filter*/#ifndef GYR_CMPF_FACTOR
   #define GYR_CMPF_FACTOR 400.0f
 #endif
 
 /* Set the Gyro Weight for Gyro/Magnetometer complementary filter */
 /* Increasing this value would reduce and delay Magnetometer influence on the output of the filter*/
-/* Default WMC value: n/a*/
 #ifndef GYR_CMPFM_FACTOR
   #define GYR_CMPFM_FACTOR 200.0f
 #endif
@@ -269,8 +265,8 @@ void getEstimatedAltitude(){
   int32_t temp32;
   int16_t last;
 
-  if (currentTime < deadLine) return;
-  deadLine = currentTime + UPDATE_INTERVAL; 
+  if (abs(currentTime - deadLine) < UPDATE_INTERVAL) return;
+  deadLine = currentTime; 
 
   //**** Alt. Set Point stabilization PID ****
   //calculate speed for D calculation
